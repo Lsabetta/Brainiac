@@ -30,10 +30,4 @@ class Brainiac():
         self.centroids[label].update(self.embeddings.mean(dim = 0).unsqueeze(0))
         #self.head[label] = self.centroids[label].cur_avg
     
-    '''def push(self, label):
-        if label in self.centroids.keys():
-            self._update_class(label)
-        else:
-            self._store_new_class(label)
-    '''
 

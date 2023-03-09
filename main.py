@@ -16,26 +16,17 @@ def main():
     
     if OPT.TEST_MODE:
         OBJECT_IDS = [i for i in range(1, 51)]
-        random.shuffle(OBJECT_IDS)
+        #random.shuffle(OBJECT_IDS)
 
     elif not OPT.TEST_MODE:
         OBJECT_IDS = [1+5*i for i in range(5)]
 
     brainiac = Brainiac(OPT.MODEL)
-    label_to_index = {}
-    index_to_label = []
+    label_map_index = {}
     iteration = 1
     m = Metrics()
 
-    ''' 
-     if TEST_MODE:
-        paths = [[PATH + str(iteration) + "/" + f for f in sorted(os.listdir(PATH + str(iteration)))] for iteration in range(1,51) ]
-
-        labels = torch.tensor([ [ [[i]*OPT.PROCESSING_FRAMES]*5 for i in range(10)]])
-        labels = labels.view(-1, labels.shape[-1])
-    '''
-        
-    while True:
+    while len(OBJECT_IDS):
         
         print(iteration)
     
@@ -46,7 +37,6 @@ def main():
                 object_id = OBJECT_IDS.pop(0)
             else:
                 object_id = input("Insert object to extract [1-50]:\n")
-            #frames_paths = [PATH + str(iteration) + "/" + f for f in sorted(os.listdir(PATH + str(iteration)))[:OPT.PROCESSING_FRAMES]]
         else:
             object_id = OBJECT_IDS.pop(0)
             print(f'The current object selected is {object_id}')
@@ -56,7 +46,7 @@ def main():
         
         #if this is the first iteration, ask user for the class name, compute embeddings and store centroid
         if len(brainiac.centroids) == 0:
-            first_iteration(core_dset, brainiac, label_to_index, index_to_label)
+            first_iteration(core_dset, brainiac, label_map_index)
             iteration += 1
             continue
         
@@ -75,45 +65,45 @@ def main():
                 ground_truth_label = CLASSES.pop(0)
             else:
                 #interact with the user based on if the class is thought already known or not
-                known_for_real, ground_truth_label  = verdict(model_prediciton, known, index_to_label, video)
+                known_for_real, ground_truth_label  = verdict(model_prediciton, known, label_map_index, video)
 
         elif OPT.TEST_MODE:
-            known_for_real = core_dset.label in label_to_index
+            known_for_real = core_dset.label in label_map_index
             ground_truth_label = core_dset.label
 
 
         
         #Store the new class or update the centroids based on the interaction with user
         if not known_for_real:
-            label_to_index[ground_truth_label] = max(label_to_index.values()) + 1
-            index_to_label.append(ground_truth_label)
+            label_map_index[ground_truth_label] = len(label_map_index.keys())
             brainiac.store_new_class(ground_truth_label)
         else:
             brainiac.update_class(ground_truth_label)
 
-        m.update(model_prediciton, ground_truth_label, known, known_for_real)
+        m.update(model_prediciton, label_map_index[ground_truth_label], known, known_for_real)
         if iteration%10 == 0:
             print(f"Total accuracy: {m.accuracy()}\nAccuracy per class: {m.class_accuracy()}\nOOD: {m.ood()}")
         iteration += 1
+    print(m.matrix)
 
 
 
-def first_iteration(core_dset, brainiac, label_to_index, index_to_label):
+def first_iteration(core_dset, brainiac, label_map_index):
     if not OPT.TEST_MODE:
         label = input("First class: what is it?\n")
     else:
-        label = core_dset[0][1]
-    print(f'The current object selected is {label}')
+        label = core_dset.label
+
 
     for (video, labels) in DataLoader(core_dset, batch_size=OPT.PROCESSING_FRAMES):
         brainiac.embeddings = brainiac.model.encode_image(video.to(OPT.DEVICE))
         break
 
     brainiac.store_new_class(label)
-    label_to_index[label] = 0
-    index_to_label.append(label)
+    label_map_index[label] = 0
    
 
 if __name__ == "__main__":
     with torch.no_grad():
         main()
+    print('hola')

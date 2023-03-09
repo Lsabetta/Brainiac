@@ -11,7 +11,7 @@ class Core50Dataset(Dataset):
         self.transform = transform
         self.scenario_id = scenario_id
         self.object_id = object_id
-        self.label = self.object_id // 5 + 1
+        self.label = ((self.object_id - 1) // 5) + 1
         self._set_data_and_labels()
 
     def _set_data_and_labels(self):

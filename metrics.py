@@ -15,8 +15,8 @@ class Metrics():
             temp = np.zeros((n+1, n+1))
             temp[:-1, :-1] = self.matrix
             self.matrix = temp
-
-        self.matrix[pred, gt] += 1
+        if known_for_real:
+            self.matrix[pred, gt] += 1
         self.update_ood(known, known_for_real)
     
     def accuracy(self):

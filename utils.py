@@ -8,6 +8,8 @@ import clip
 from PIL import Image
 import torchshow as ts
 from opt import OPT
+import random
+import numpy as np
 
 class RunningTensor:
     """ Store a tensor and expose an update method to compute a running
@@ -83,5 +85,24 @@ def verdict(cls_idx, known, label_map_index, video):
         else:
             real_cls_name = input(f"Oh Dang.. Would you tell me what it is than?\n")
             return known_for_real, real_cls_name
+            
+def set_seeds(seed):
+    """ Set reproducibility seeds """
+    # torch.manual_seed(seed)                                                                                                                                         
+    # random.seed(seed)                                                                                                                                               
+    # np.random.seed(seed)                                                                                                                                            
 
+    random.seed(seed)
+    np.random.seed(seed)
+
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.enabled = False                                                                                                                            
+
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    #torch.backends.cudnn.enabled = False            
         

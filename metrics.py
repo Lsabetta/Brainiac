@@ -8,6 +8,8 @@ class Metrics():
         self.matrix = np.zeros((10,10))
         self.ood_acc = 0
         self.ood_den = 0
+        self.confusion_acc = 0
+        self.confusion_den = 0
 
     def update(self, pred, gt, known, known_for_real):
         n = self.matrix.shape[-1]
@@ -27,6 +29,9 @@ class Metrics():
     
     def ood(self):
         return self.ood_acc/self.ood_den
+    
+    def confusion(self):
+        return self.confusion_acc/self.confusion_den
 
     def update_ood(self, known, known_for_real):
 
@@ -36,7 +41,7 @@ class Metrics():
 
         #Era nel dominio del modello e il modello non lo ha capito #false negative
         if not known and known_for_real: 
-            pass
+            self.confusion_acc += 1
 
         #Non era nel dominio del modello e il modello non lo ha capito #false positive
         if known and not known_for_real: 
@@ -45,7 +50,10 @@ class Metrics():
         #Non era nel dominio del modello e il modello lo ha capito #true positive
         if not known and not known_for_real: 
             self.ood_acc += 1
-
-        self.ood_den += 1 if not known_for_real else 0
+        if not known_for_real:
+            self.ood_den += 1  
+        else:
+            self.confusion_den += 1
+        #else 0
 
 

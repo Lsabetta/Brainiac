@@ -6,7 +6,7 @@ from PIL import Image
 class Core50Dataset(Dataset):
     """ Scenario Dataset for Core50 it requires a scenario number  """
     
-    def __init__(self, scenario_id, object_id, data_path='/home/leonardolabs/data', transform=None):
+    def __init__(self, scenario_id, object_id, data_path='/home/luigi/Work/data', transform=None):
         self.data_path = data_path+'/core50_128x128/'
         self.transform = transform
         self.scenario_id = scenario_id

@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from utils import check_known, verdict
+from utils import check_known, verdict, set_seeds
 from read_core50 import Core50Dataset
 from Brainiac import Brainiac
 import os
@@ -11,12 +11,13 @@ from metrics import Metrics
 
 
 def main():
+    set_seeds(OPT.SEED)
     #PATH = "/home/leonardolabs/data/core50_128x128/s1/o"
     CLASSES = ["socket", "phone", "scissors", "bulb", "can"]
     
     if OPT.TEST_MODE:
         OBJECT_IDS = [i for i in range(1, 51)]
-        #random.shuffle(OBJECT_IDS)
+        random.shuffle(OBJECT_IDS)
 
     elif not OPT.TEST_MODE:
         OBJECT_IDS = [1+5*i for i in range(5)]
@@ -28,7 +29,7 @@ def main():
 
     while len(OBJECT_IDS):
         
-        print(iteration)
+        print(f"Iteration n {iteration}")
     
         # Core50 paths for the current object
         
@@ -82,7 +83,7 @@ def main():
 
         m.update(model_prediciton, label_map_index[ground_truth_label], known, known_for_real)
         if iteration%10 == 0:
-            print(f"Total accuracy: {m.accuracy()}\nAccuracy per class: {m.class_accuracy()}\nOOD: {m.ood()}")
+            print(f"Total accuracy: {m.accuracy()}\nAccuracy per class: {m.class_accuracy()}\nOOD: {m.ood()}\nConfusion: {m.confusion()}")
         iteration += 1
     print(m.matrix)
 

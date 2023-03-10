@@ -1,5 +1,6 @@
 class OPT:
-    THRESHOLD = 6.5
+    SEED = 0
+    THRESHOLD = 6.0
     MODEL = "CLIP"
     DEVICE='cuda:0'
     PROCESSING_FRAMES = 150

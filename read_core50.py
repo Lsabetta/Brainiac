@@ -18,6 +18,7 @@ class Core50Dataset(Dataset):
         """ Retrieve all paths and labels"""
         # Retrieve all paths of the specified shenario
         self.paths = sorted(glob.glob(self.data_path+f'/s{self.scenario_id}/o{self.object_id}/*.png'))
+        
 
     def reset_task_to(self, scenario_id):
         """ Reset the dataset to a new scenario"""

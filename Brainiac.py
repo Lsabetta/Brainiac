@@ -5,6 +5,7 @@ from utils import get_model
 import timm
 from utils import RunningTensor
 from opt import OPT
+from torch.utils.data import DataLoader
 
 class Brainiac():
     def __init__(self, model_name, distance_type) -> None:
@@ -64,4 +65,8 @@ class Brainiac():
             return distances
 
 
-
+    def forward_example(self, x):
+        
+        for video in DataLoader(x, batch_size=x.shape[0]):
+            self.embeddings = self.model.encode_image(video.to(OPT.DEVICE))
+            break

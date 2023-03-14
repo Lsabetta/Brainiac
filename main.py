@@ -8,6 +8,7 @@ from opt import OPT
 import glob
 import random
 from metrics import Metrics
+import pickle as pkl
 
 
 def main():
@@ -26,14 +27,16 @@ def main():
     label_map_index = {}
     iteration = 1
     m = Metrics()
+    print_every = 1 if OPT.VERBOSE else 20
     for scenario_id in SCENARIOS_IDS:
         if OPT.TEST_MODE:
             OBJECT_IDS = [i for i in range(1, 51)]
             random.shuffle(OBJECT_IDS)
         while len(OBJECT_IDS):
             
-            print(f"Iteration n {iteration}")
-            print(f"Unique classes seen: {len(label_map_index)}")
+            if (iteration-1) % print_every == 0:
+                print(f"Iteration n {iteration}")
+                print(f"Unique classes seen: {len(label_map_index)}, threshold: {OPT.THRESHOLD}")
         
             # Core50 paths for the current object
             
@@ -46,7 +49,8 @@ def main():
                 object_id = OBJECT_IDS.pop(0)
                 
             #scenario_id = random.randint(1,11)
-            print(f'The current object selected is {object_id}, scenario {scenario_id}')
+            if OPT.VERBOSE:
+                print(f'The current object selected is {object_id}, scenario {scenario_id}')
             core_dset = Core50Dataset(scenario_id=scenario_id, object_id=object_id, transform=brainiac.preprocessing)
 
             
@@ -87,10 +91,12 @@ def main():
                 brainiac.update_class(ground_truth_label)
 
             m.update(model_prediciton, label_map_index[ground_truth_label], known, known_for_real)
-            if iteration%10 == 0:
+            if (iteration-1) % print_every == 0:
                 print(f"Total accuracy: {m.accuracy()}\nAccuracy per class: {m.class_accuracy()}\nOOD: {m.ood()}\nConfusion: {m.confusion()}")
             iteration += 1
     print(m.matrix)
+    with open(f"results/thresholds/matrix_t{OPT.THRESHOLD}.pkl", "wb") as f:
+        pkl.dump(m, f)
 
 
 
@@ -111,5 +117,8 @@ def first_iteration(core_dset, brainiac, label_map_index):
 
 if __name__ == "__main__":
     with torch.no_grad():
-        main()
-    print('hola')
+        THRESHOLDS = torch.arange(6.1, 7, 0.1)
+        for t in THRESHOLDS:
+            OPT.THRESHOLD = t
+            main()
+    

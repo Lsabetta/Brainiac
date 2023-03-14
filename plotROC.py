@@ -3,10 +3,12 @@ import matplotlib.pyplot as plt
 import glob
 import torch
 
-OODs = [0.]
-confusions = [1.]
+OODs = [1]
+confusions = [1]
 paths = glob.glob("results/thresholds/*")
-thresholds = [float(".".join(p.split("_")[-1].split(".")[:-1])[1:]) for p in paths]
+thresholds =  [float(".".join(p.split("_")[-1].split(".")[:-1])[1:]) for p in paths]
+for n in [3.0, 3.5, 4.0, 4.5, 5.0, 6.3]:
+    thresholds.pop(thresholds.index(n))
 thresholds.sort()
 #thresholds = torch.arange(5, 8, 0.5).numpy()
 path = "results/thresholds/matrix_t"
@@ -19,23 +21,30 @@ for i, p in enumerate(matrices_paths):
         m = pkl.load(f)
         #thresholds.append(float("".join(p.split("_")[-1].split(".")[:-1])[1:]))
         confusions.append(m.confusion())
-        OODs.append(1-m.ood())
-confusions.append(0.)
-OODs.append(1.)
+        OODs.append(m.ood())
+thresholds = [0] + thresholds
+#confusions.append(0.)
+#OODs.append(0.)
 
 plt.plot(confusions, OODs, 'b')
-#plt.fill_between(confusions, OODs)
+plt.fill_between(confusions, OODs)
 for i, t in enumerate(thresholds):
-    plt.annotate(str(round(t, 2)), (confusions[i], OODs[i]), xytext=(-15, 5), textcoords = "offset points") 
+    if t == 0:
+        continue
+    plt.annotate(str(round(t, 2)), (confusions[i], OODs[i]), xytext=(-15, 5), textcoords = "offset points")
+    print(t, confusions[i], OODs[i]) 
 plt.legend(loc = 'lower right')
+
 xmin = 0.005
-plt.plot(torch.arange(1, 1, 0.001), torch.arange(xmin, 1, 0.001),'r--')
+#plt.plot(torch.arange(xmin, 1, 0.001), torch.arange(xmin, 1, 0.001).sort(descending=True)[0],'r--')
+plt.plot(torch.arange(xmin, 1, 0.001), torch.arange(xmin, 1, 0.001),'r--')
+
 plt.xlim([xmin, 1])
 plt.ylim([xmin, 1])
 plt.xscale("log")
 #plt.yscale("log")
 plt.grid()
-plt.ylabel('OOD')
-plt.xlabel('Confusion')
-plt.show()
+plt.ylabel('OOD (%)')
+plt.xlabel('Confusion (%)')
+#plt.show()
 plt.savefig("prova.pdf")

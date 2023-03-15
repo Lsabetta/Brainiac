@@ -6,6 +6,7 @@ import timm
 from utils import RunningTensor
 from opt import OPT
 from torch.utils.data import DataLoader
+import torchvision.transforms as T
 
 class Brainiac():
     def __init__(self, model_name, distance_type) -> None:
@@ -18,6 +19,7 @@ class Brainiac():
         self.model.eval()
         self.head = torch.tensor([])
         self.distance_type = distance_type
+        self.index_2_label = {} #this is a variable that map indices to labels
 
     def predict(self, x):
         self.embeddings = self.model.encode_image(x) #store latest embeddings computed
@@ -27,9 +29,10 @@ class Brainiac():
 
     def store_new_class(self, label):
         rt = RunningTensor()
-        _ = rt.update(self.embeddings.mean(dim = 0).unsqueeze(0))
+        _ = rt.update(self.embeddings.mean(dim = 0).unsqueeze(0).detach())
         self.centroids[label] = rt
         self.sigmas[label] = self.embeddings.std(dim = 0)
+        self.index_2_label[len(self.index_2_label)] = label
 
     
     def update_class(self, label):
@@ -50,7 +53,7 @@ class Brainiac():
 
     def distance(self):
         if self.distance_type == "l2":
-            return torch.cdist(self.embeddings, torch.cat([c.cur_avg for c in self.centroids.values()], dim = 0))
+            return torch.cdist(self.embeddings.to(torch.float32), torch.cat([c.cur_avg.to(torch.float32) for c in self.centroids.values()], dim = 0))
 
         if self.distance_type == "l1":
             return torch.cdist(self.embeddings, torch.cat([c.cur_avg for c in self.centroids.values()], dim = 0), p = 1)
@@ -65,8 +68,19 @@ class Brainiac():
             return distances
 
 
-    def forward_example(self, x):
-        
-        for video in DataLoader(x, batch_size=x.shape[0]):
+    def forward_example(self, x, first_iteration):
+        transform = T.ToPILImage()
+        b = torch.tensor([])
+        if self.preprocessing:
+            for i, im in enumerate(x):
+                im = transform(im)
+                b = torch.cat((b, self.preprocessing(im).unsqueeze(0)))
+        print(b.shape)
+        for video in DataLoader(b, batch_size=b.shape[0]):
             self.embeddings = self.model.encode_image(video.to(OPT.DEVICE))
             break
+        if first_iteration:
+            return
+        distances = self.distance()
+        prediction = torch.mode(torch.argmin(distances, dim = 1)).values.item()
+        return prediction, distances

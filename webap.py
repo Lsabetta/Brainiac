@@ -3,49 +3,14 @@ import torch
 import torchvision
 from Brainiac import Brainiac
 from opt import OPT
-
+from utils import check_known
+from webfunc import *
 
 # Set the page layout to wide
 st.set_page_config(layout="wide")
 
 
 # Declare a class to store the chat history
-class TextHistory:
-    def __init__(self):
-        self.text = [">"]*10
-
-    def write(self, text):
-        if type(text) is list:
-            self.text += text
-        else:
-            self.text.append(text)
-
-    def __str__(self):
-        return '\n'.join(self.text)
-    
-    def get_text(self):
-        return '\n'.join(self.text[-10:])
-
-@st.cache_resource()
-def make_text_history():
-    texthistory = TextHistory()
-    return texthistory
-
-@st.cache_resource()
-def make_brainiac():
-    brainiac = Brainiac(OPT.MODEL, OPT.DISTANCE_TYPE)
-    return brainiac
-
-def submit():
-    #st.session_state.cached_input = '> ' + st.session_state.user_input
-    st.session_state.texthistory.write('> ' + st.session_state.user_input)
-    st.session_state.user_input = ""
-
-def on_inference_click():
-    if st.session_state.torch_img is not None:
-        print('sono arrivato fino a qua')
-        st.session_state.texthistory.write('$ clickato')
-        st.session_state.brainiac.forward_example(st.session_state.torch_img)
 
 
 ##########################################
@@ -57,24 +22,41 @@ if 'texthistory' not in st.session_state:
 
 if 'brainiac' not in st.session_state:
     st.session_state.brainiac = make_brainiac()
+    st.session_state.prediction = None
+    st.session_state.distances = None
+    st.session_state.right_answer = None
+    st.session_state.known = None
+    st.session_state.new_class = True
+
 
 if 'torch_img' not in st.session_state:
     st.session_state.torch_img = None
 
+if 'disable_new_infer' not in st.session_state:
+    st.session_state.disable_new_infer = False
+    st.session_state.waiting_yn = False
+
+
 ##########################################
 ##########################################
+print(st.session_state.brainiac.index_2_label)
 
 # Declare columns
 left_column, center_column, right_column = st.columns([2, 3, 2])
+
 with left_column:
     st.header("Console")
     st.text("Output")
     chat = st.empty()
-    
-    # Input
-    #texthistory.write(st.session_state.cached_input)
-    
-    st.text_input("Input", key="user_input", on_change=submit)
+    if not st.session_state.waiting_yn:
+        st.text_input("Input", key="user_input", on_change=submit)
+    else:
+        yes_column, no_column = st.columns([1,1])
+        with yes_column:
+            st.button("Yes", on_click=yes_func)
+        with no_column:
+            st.button("No", on_click=no_func)
+
     chat.text(st.session_state.texthistory.get_text())
     
 
@@ -104,7 +86,7 @@ with center_column:
 
 with right_column:
     
-    st.button('Predict', on_click=on_inference_click)
+    st.button('Predict', on_click=on_inference_click, disabled = st.session_state.disable_new_infer)
 
 
 #st.container

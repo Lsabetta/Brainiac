@@ -1,55 +1,66 @@
 import streamlit as st
 import torch
 import torchvision
-from Brainiac import Brainiac
 from opt import OPT
-from utils import check_known
 from webfunc import *
+import torchvision.transforms as T
+
+#alias for session_state
+
+ss = st.session_state
 
 # Set the page layout to wide
 st.set_page_config(layout="wide")
-
-
-# Declare a class to store the chat history
 
 
 ##########################################
 ##########################################
 
 # Declare session state variables
-if 'texthistory' not in st.session_state:
-    st.session_state.texthistory = make_text_history()
+if 'texthistory' not in ss:
+    ss.texthistory = make_text_history()
 
-if 'brainiac' not in st.session_state:
-    st.session_state.brainiac = make_brainiac()
-    st.session_state.prediction = None
-    st.session_state.distances = None
-    st.session_state.right_answer = None
-    st.session_state.known = None
-    st.session_state.new_class = True
+if 'brainiac' not in ss:
+    ss.brainiac = make_brainiac()
+    ss.prediction = None
+    ss.distances = None
+    ss.known = None
 
 
-if 'torch_img' not in st.session_state:
-    st.session_state.torch_img = None
+if 'image' not in ss:
+    ss.image = None
+    ss.image_buffer = []
 
-if 'disable_new_infer' not in st.session_state:
-    st.session_state.disable_new_infer = False
-    st.session_state.waiting_yn = False
+if 'disable_new_infer' not in ss:
+    ss.disable_new_infer = False
+    ss.waiting_yn = False
 
 
 ##########################################
 ##########################################
-print(st.session_state.brainiac.index_2_label)
+print(ss.brainiac.index_2_label)
 
 # Declare columns
-left_column, center_column, right_column = st.columns([2, 3, 2])
+
+left_column, right_column = st.columns([2, 3])
+set_page_container_style()
+with st.sidebar:
+    transform = T.ToPILImage()
+    for i, img in enumerate(ss.image_buffer):
+        #st.markdown("""---""")
+        l, c, r = st.columns([20, 2, 1])
+        with c:
+            st.button("x", key=f"x_{i}")
+        img = transform(img)
+        st.image(img, caption=ss.brainiac.index_2_label[i])
 
 with left_column:
     st.header("Console")
-    st.text("Output")
+    st.subheader("Output")
     chat = st.empty()
-    if not st.session_state.waiting_yn:
-        st.text_input("Input", key="user_input", on_change=submit)
+    if not ss.waiting_yn:
+        st.subheader("Input")
+        st.text_input("Input", label_visibility = "collapsed", key="user_input", on_change=submit)
     else:
         yes_column, no_column = st.columns([1,1])
         with yes_column:
@@ -57,36 +68,32 @@ with left_column:
         with no_column:
             st.button("No", on_click=no_func)
 
-    chat.text(st.session_state.texthistory.get_text())
+    chat.text(ss.texthistory.get_text())
     
 
 
-with center_column:
-    st.header("What I see")
+with right_column:
+    print(ss.prediction)
+    if ss.prediction != None:
+        cls_predicted = ss.brainiac.index_2_label[ss.prediction]
+    else:
+        cls_predicted = ""
+    
+    st.header(f"What I see: {cls_predicted}")
 
-    img_file_buffer = st.camera_input("Take a picture")
+    img_file_buffer = st.camera_input("Take a picture", label_visibility = "collapsed", on_change=clear_pred)
 
     if img_file_buffer is not None:
         # To read image file buffer as a 3D uint8 tensor with `torchvision.io`:
         bytes_data = img_file_buffer.getvalue()
-        torch_img = torchvision.io.decode_image(
+        image = torchvision.io.decode_image(
             torch.frombuffer(bytes_data, dtype=torch.uint8)
         ).unsqueeze(0).to(OPT.DEVICE)
         
-        st.session_state.torch_img = torch_img
-
-        # Check the type of torch_img:
-        # Should output: <class 'torch.Tensor'>
-        st.write(type(torch_img))
-
-        # Check the shape of torch_img:
-        # Should output shape: torch.Size([channels, height, width])
-        st.write(torch_img.shape)
-
-
-with right_column:
+        ss.image = image
     
-    st.button('Predict', on_click=on_inference_click, disabled = st.session_state.disable_new_infer)
-
-
-#st.container
+    st.button('Predict', on_click=on_inference_click, disabled = ss.disable_new_infer, use_container_width = True)
+    
+    # rc_l, rc_c, rc_r = st.columns([1,1,1])
+    # with rc_c: 
+    #     st.header(ss.brainiac.index_2_label[ss.prediction])

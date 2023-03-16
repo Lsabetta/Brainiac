@@ -3,7 +3,11 @@ import torch
 from Brainiac import Brainiac
 from opt import OPT
 from utils import check_known
+
+#alias for session_state
 ss = st.session_state
+
+# Declare a class to store the chat history
 class TextHistory:
     def __init__(self):
         self.text = [">"]*10
@@ -40,6 +44,7 @@ def submit():
         if len(cls_index) == 0: #the class is new since it is not present in the dic
             ss.disable_new_infer = False
             ss.brainiac.store_new_class(ss.user_input)
+            ss.image_buffer.append(ss.image.squeeze(0))
             ss.texthistory.write(f'$ class {ss.user_input} stored')
 
         else: #class is known, centroids to be updated
@@ -54,15 +59,14 @@ def submit():
 def on_inference_click():
     ss.disable_new_infer = True
 
-    if ss.torch_img is not None:
+    if ss.image is not None:
         first_iteration = len(ss.brainiac.index_2_label)==0
         if not first_iteration:
-            ss.prediction, ss.distances = ss.brainiac.forward_example(ss.torch_img, first_iteration)
+            ss.prediction, ss.distances = ss.brainiac.forward_example(ss.image, first_iteration)
             ss.known = check_known(ss.prediction, ss.distances, OPT.THRESHOLD)
             label_pred = ss.brainiac.index_2_label[ss.prediction]
             if ss.known:
                 ss.texthistory.write(f"$ I believe it is a {label_pred}. Am I right?")
-                print(ss.prediction)
                 ss.waiting_yn = True
             else:
                 ss.texthistory.write(f"$ The closest thing is {label_pred}")
@@ -71,13 +75,13 @@ def on_inference_click():
 
         else: 
             #on_first_iteration(first_iteration)
-            ss.brainiac.forward_example(ss.torch_img, first_iteration)
+            ss.brainiac.forward_example(ss.image, first_iteration)
             ss.texthistory.write("$ First image ever seen.")
             ss.texthistory.write("$ Would you tell me what this is?")
 
 
 def on_first_iteration(first_iteration):
-    ss.brainiac.forward_example(ss.torch_img, first_iteration)
+    ss.brainiac.forward_example(ss.image, first_iteration)
     ss.texthistory.write("$ First image ever seen.")
     ss.texthistory.write("$ Would you tell me what this is?")
 
@@ -108,3 +112,39 @@ def no_func():
         ss.texthistory.write(f"$ Dang. Was it a {label_pred}?")
         ss.known = True
         
+def clear_pred():
+    ss.prediction = None
+    
+
+def set_page_container_style():
+ 
+    st.markdown(
+        f'''
+        <style>
+        /* sidebar */
+        .css-1544g2n {{
+            padding: 2.5rem 0rem 0rem;
+            }}
+
+        /* markdownline */
+        .css-1kbbaad {{
+            padding: 0rem 0rem 0rem;
+            }}
+
+        /* central-widget */
+        .css-z5fcl4 {{
+            padding: 2rem 1rem 1rem 1rem;
+            }}
+
+        .css-8koux3 {{
+    
+            font-weight: 200;
+            padding: 0.25rem 0.25rem;
+            
+            width: 1rem;
+            height: 1rem;
+             }}
+        </style>
+        ''',
+        unsafe_allow_html=True,
+    )

@@ -3,6 +3,7 @@ import torch
 from Brainiac import Brainiac
 from opt import OPT
 from utils import check_known
+import av
 
 #alias for session_state
 ss = st.session_state
@@ -44,13 +45,15 @@ def submit():
         if len(cls_index) == 0: #the class is new since it is not present in the dic
             ss.disable_new_infer = False
             ss.brainiac.store_new_class(ss.user_input)
-            ss.image_buffer.append(ss.image.squeeze(0))
+            ss.cls_image_examples.append(ss.image)
             ss.texthistory.write(f'$ class {ss.user_input} stored')
+            ss.image_buffer = []
 
         else: #class is known, centroids to be updated
             ss.disable_new_infer = False
             ss.brainiac.update_class(ss.user_input)
             ss.texthistory.write(f'$ class {ss.user_input} updated')
+            ss.image_buffer = []
             
                 
 
@@ -62,7 +65,13 @@ def on_inference_click():
     if ss.image is not None:
         first_iteration = len(ss.brainiac.index_2_label)==0
         if not first_iteration:
-            ss.prediction, ss.distances = ss.brainiac.forward_example(ss.image, first_iteration)
+            if len(ss.image_buffer) == 1:
+                stack = ss.image_buffer[0].unsqueeze(0)
+            else:
+                stack = torch.stack(ss.image_buffer)
+
+            ss.prediction, ss.distances = ss.brainiac.forward_example(stack, first_iteration)
+            
             ss.known = check_known(ss.prediction, ss.distances, OPT.THRESHOLD)
             label_pred = ss.brainiac.index_2_label[ss.prediction]
             if ss.known:
@@ -75,15 +84,15 @@ def on_inference_click():
 
         else: 
             #on_first_iteration(first_iteration)
-            ss.brainiac.forward_example(ss.image, first_iteration)
+            if len(ss.image_buffer) == 1:
+                stack = ss.image_buffer[0].unsqueeze(0)
+            else:
+                stack = torch.stack(ss.image_buffer)
+
+            ss.brainiac.forward_example(stack, first_iteration)
             ss.texthistory.write("$ First image ever seen.")
             ss.texthistory.write("$ Would you tell me what this is?")
 
-
-def on_first_iteration(first_iteration):
-    ss.brainiac.forward_example(ss.image, first_iteration)
-    ss.texthistory.write("$ First image ever seen.")
-    ss.texthistory.write("$ Would you tell me what this is?")
 
 def yes_func():
     ss.waiting_yn = False
@@ -94,6 +103,8 @@ def yes_func():
         ss.brainiac.update_class(label_pred)
         ss.texthistory.write(f"$ class {label_pred} updated")
         ss.disable_new_infer = False
+        ss.image_buffer = []
+
     else:
         #behaviour when brainiac was right in telling the class is new
         ss.texthistory.write("$ Would you tell me what this is?")
@@ -114,6 +125,11 @@ def no_func():
         
 def clear_pred():
     ss.prediction = None
+    ss.count_click_photo += 1
+    if (ss.image is not None) and (ss.count_click_photo%2 == 0):
+        ss.image_buffer.append(ss.image)
+        print([el.shape for el in ss.image_buffer])
+
     
 
 def set_page_container_style():
@@ -124,6 +140,7 @@ def set_page_container_style():
         /* sidebar */
         .css-1544g2n {{
             padding: 2.5rem 0rem 0rem;
+            
             }}
 
         /* markdownline */
@@ -135,7 +152,7 @@ def set_page_container_style():
         .css-z5fcl4 {{
             padding: 2rem 1rem 1rem 1rem;
             }}
-
+        /*x button width*/
         .css-8koux3 {{
     
             font-weight: 200;
@@ -144,6 +161,14 @@ def set_page_container_style():
             width: 1rem;
             height: 1rem;
              }}
+        /*.css-13n2bn5{{
+            height: 400px;
+        }}
+        video{{
+            height: 350px;
+        }}*/
+
+
         </style>
         ''',
         unsafe_allow_html=True,

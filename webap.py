@@ -4,14 +4,11 @@ import torchvision
 from opt import OPT
 from webfunc import *
 import torchvision.transforms as T
-
+import torch.nn.functional as F
 #alias for session_state
-
 ss = st.session_state
-
 # Set the page layout to wide
 st.set_page_config(layout="wide")
-
 
 ##########################################
 ##########################################
@@ -25,11 +22,17 @@ if 'brainiac' not in ss:
     ss.prediction = None
     ss.distances = None
     ss.known = None
+if 'sframe_list' not in ss:
+    ss.sframe_list = []
+
 
 
 if 'image' not in ss:
     ss.image = None
+    ss.cls_image_examples = []
     ss.image_buffer = []
+    ss.count_click_photo = 0
+
 
 if 'disable_new_infer' not in ss:
     ss.disable_new_infer = False
@@ -46,7 +49,7 @@ left_column, right_column = st.columns([2, 3])
 set_page_container_style()
 with st.sidebar:
     transform = T.ToPILImage()
-    for i, img in enumerate(ss.image_buffer):
+    for i, img in enumerate(ss.cls_image_examples):
         #st.markdown("""---""")
         l, c, r = st.columns([20, 2, 1])
         with c:
@@ -69,18 +72,19 @@ with left_column:
             st.button("No", on_click=no_func)
 
     chat.text(ss.texthistory.get_text())
+    with st.container():
+        st.write("Acquired frames")
+        st.image([transform(img) for img in ss.image_buffer], width=188)
     
 
 
 with right_column:
-    print(ss.prediction)
     if ss.prediction != None:
         cls_predicted = ss.brainiac.index_2_label[ss.prediction]
     else:
         cls_predicted = ""
     
     st.header(f"What I see: {cls_predicted}")
-
     img_file_buffer = st.camera_input("Take a picture", label_visibility = "collapsed", on_change=clear_pred)
 
     if img_file_buffer is not None:
@@ -88,12 +92,10 @@ with right_column:
         bytes_data = img_file_buffer.getvalue()
         image = torchvision.io.decode_image(
             torch.frombuffer(bytes_data, dtype=torch.uint8)
-        ).unsqueeze(0).to(OPT.DEVICE)
-        
-        ss.image = image
+        ).to(OPT.DEVICE)
+        ss.image = torchvision.transforms.Resize((400, 700))(image)
     
     st.button('Predict', on_click=on_inference_click, disabled = ss.disable_new_infer, use_container_width = True)
     
-    # rc_l, rc_c, rc_r = st.columns([1,1,1])
-    # with rc_c: 
-    #     st.header(ss.brainiac.index_2_label[ss.prediction])
+    
+

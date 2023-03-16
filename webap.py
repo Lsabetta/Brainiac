@@ -74,17 +74,19 @@ with left_column:
     chat.text(ss.texthistory.get_text())
     with st.container():
         st.write("Acquired frames")
-        st.image([transform(img) for img in ss.image_buffer], width=188)
+        st.image([transform(img) for img in ss.image_buffer], width=155)
     
 
 
 with right_column:
-    if ss.prediction != None:
+    if ss.prediction != None and ss.known:
         cls_predicted = ss.brainiac.index_2_label[ss.prediction]
+    elif ss.prediction != None and not ss.known:
+        cls_predicted = "New Class"
     else:
         cls_predicted = ""
-    
-    st.header(f"What I see: {cls_predicted}")
+
+    st.markdown(f'## What I see: <span style="color:#94403A;"> {cls_predicted} </span> ', unsafe_allow_html=True)
     img_file_buffer = st.camera_input("Take a picture", label_visibility = "collapsed", on_change=clear_pred)
 
     if img_file_buffer is not None:

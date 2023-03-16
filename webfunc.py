@@ -75,7 +75,7 @@ def on_inference_click():
             ss.known = check_known(ss.prediction, ss.distances, OPT.THRESHOLD)
             label_pred = ss.brainiac.index_2_label[ss.prediction]
             if ss.known:
-                ss.texthistory.write(f"$ I believe it is a {label_pred}. Am I right?")
+                ss.texthistory.write(f'$ I believe it is a {label_pred}. Am I right?')
                 ss.waiting_yn = True
             else:
                 ss.texthistory.write(f"$ The closest thing is {label_pred}")

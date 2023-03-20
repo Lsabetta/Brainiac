@@ -46,7 +46,7 @@ print(ss.brainiac.index_2_label)
 # Declare columns
 
 left_column, right_column = st.columns([2, 3])
-set_page_container_style()
+
 with st.sidebar:
     transform = T.ToPILImage()
     for i, img in enumerate(ss.cls_image_examples):
@@ -99,5 +99,6 @@ with right_column:
     
     st.button('Predict', on_click=on_inference_click, disabled = ss.disable_new_infer, use_container_width = True)
     
-    
+set_page_container_style()
+
 

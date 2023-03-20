@@ -13,6 +13,7 @@ class Brainiac():
         #super(Brainiac, self).__init__()
         self.model_name = model_name
         self.centroids = {}
+        self.all_embeddings = {}
         self.sigmas = {}
         self.covariance_matrix = torch.zeros((10,10))
         self.model, self.preprocessing = get_model(model_name)
@@ -28,21 +29,23 @@ class Brainiac():
         return prediction, distances
 
     def store_new_class(self, label):
-        rt = RunningTensor()
-        _ = rt.update(self.embeddings.mean(dim = 0).unsqueeze(0).detach())
-        self.centroids[label] = rt
+        
+        self.all_embeddings[label] = self.embeddings.detach()
+        self.centroids[label] = self.embeddings.mean(dim = 0).detach()
         self.sigmas[label] = self.embeddings.std(dim = 0)
         self.index_2_label[len(self.index_2_label)] = label
 
     
     def update_class(self, label):
         
-        emb_mean = self.embeddings.mean(dim = 0)
-        centroid = self.centroids[label].cur_avg
-        self.centroids[label].update(emb_mean.unsqueeze(0))
-        n = self.centroids[label].n
+        emb_mean = self.embeddings.mean(dim = 0).unsqueeze(0).detach()
+        self.all_embeddings[label] = torch.cat((self.all_embeddings[label], self.embeddings.detach()))
+        self.centroids[label] = self.all_embeddings[label].mean(dim=0)
+        self.sigmas[label] = self.all_embeddings[label].std(dim=0)
+
+        #n = self.centroids[label].n
         
-        self.sigmas[label] = (self.sigmas[label]*(n-1) + self.embeddings.std(dim = 0))/n
+        #self.sigmas[label] = (self.sigmas[label]*(n-1) + self.embeddings.std(dim = 0))/n
 
         '''
         if label not in self.sigmas:
@@ -53,10 +56,10 @@ class Brainiac():
 
     def distance(self):
         if self.distance_type == "l2":
-            return torch.cdist(self.embeddings.to(torch.float32), torch.cat([c.cur_avg.to(torch.float32) for c in self.centroids.values()], dim = 0))
+            return torch.cdist(self.embeddings.to(torch.float32), torch.stack([c.to(torch.float32) for c in self.centroids.values()]))
 
         if self.distance_type == "l1":
-            return torch.cdist(self.embeddings, torch.cat([c.cur_avg for c in self.centroids.values()], dim = 0), p = 1)
+            return torch.cdist(self.embeddings.to(torch.float32), torch.stack([c.to(torch.float32) for c in self.centroids.values()]), p = 1)
         
         if self.distance_type == "normalized_l2":
             distances = torch.tensor([]).to(OPT.DEVICE)

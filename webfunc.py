@@ -168,6 +168,11 @@ def set_page_container_style():
             height: 350px;
         }}*/
 
+        /*pages div*/
+        .css-1mbwpjo{{
+            padding-top: 3rem;
+            
+             }}
 
         </style>
         ''',

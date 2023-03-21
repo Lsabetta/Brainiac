@@ -58,23 +58,23 @@ def check_known(cls, distances, threshold):
     else:
         return False 
 
-def verdict(cls_idx, known, label_map_index, video):
+def verdict(cls_idx, known, label_2_index, video):
     if known:
         ts.show(video[0])
-        answer = input(f"I know what this is! It's a {label_map_index[cls_idx]}. Do you agree?(y/n)\n")
+        answer = input(f"I know what this is! It's a {label_2_index[cls_idx]}. Do you agree?(y/n)\n")
         if answer in ["y", "yes", "Yes", "YES"]:
             known_for_real = True
         else:
             known_for_real = False
 
         if known_for_real:
-            return known_for_real, label_map_index[cls_idx]
+            return known_for_real, label_2_index[cls_idx]
         else:
             real_cls_name = input(f"Oh Dang.. Would you tell me what it is than?\n")
             return known_for_real, real_cls_name
     else:
         ts.show(video[0])
-        answer = input(f"The closest guess would be {label_map_index[cls_idx]}, but I think the truth is I never saw this object.\nNew object! Right?(y/n)\n")
+        answer = input(f"The closest guess would be {label_2_index[cls_idx]}, but I think the truth is I never saw this object.\nNew object! Right?(y/n)\n")
         if answer in ["y", "yes", "Yes", "YES"]:
             known_for_real = False
         else:

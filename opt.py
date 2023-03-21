@@ -5,5 +5,5 @@ class OPT:
     DEVICE='cuda:0'
     PROCESSING_FRAMES = 150
     TEST_MODE = True
-    DISTANCE_TYPE = "l2"
+    DISTANCE_TYPE = "inverse_cosine"
     VERBOSE = False

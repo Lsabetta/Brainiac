@@ -24,7 +24,6 @@ def main():
         OBJECT_IDS = [1+5*i for i in range(5)]
 
     brainiac = Brainiac(OPT.MODEL, OPT.DISTANCE_TYPE)
-    label_map_index = {}
     iteration = 1
     m = Metrics()
     print_every = 1 if OPT.VERBOSE else 20
@@ -36,7 +35,8 @@ def main():
             
             if (iteration-1) % print_every == 0:
                 print(f"Iteration n {iteration}")
-                print(f"Unique classes seen: {len(label_map_index)}, threshold: {OPT.THRESHOLD}")
+                print(f"Unique classes seen: {len(brainiac.label_2_index)}, threshold: {format(OPT.THRESHOLD, '.2f')}")
+                print(f"{brainiac.label_2_index=}\n{brainiac.index_2_label=}")
         
             # Core50 paths for the current object
             
@@ -47,6 +47,7 @@ def main():
                     object_id = input("Insert object to extract [1-50]:\n")
             else:
                 object_id = OBJECT_IDS.pop(0)
+
                 
             #scenario_id = random.randint(1,11)
             if OPT.VERBOSE:
@@ -56,7 +57,7 @@ def main():
             
             #if this is the first iteration, ask user for the class name, compute embeddings and store centroid
             if len(brainiac.centroids) == 0:
-                first_iteration(core_dset, brainiac, label_map_index)
+                first_iteration(core_dset, brainiac)
                 iteration += 1
                 continue
             
@@ -75,32 +76,34 @@ def main():
                     ground_truth_label = CLASSES.pop(0)
                 else:
                     #interact with the user based on if the class is thought already known or not
-                    known_for_real, ground_truth_label  = verdict(model_prediciton, known, label_map_index, video)
+                    known_for_real, ground_truth_label  = verdict(model_prediciton, known, brainiac.label_2_index, video)
 
             elif OPT.TEST_MODE:
-                known_for_real = core_dset.label in label_map_index
+                known_for_real = core_dset.label in brainiac.label_2_index
                 ground_truth_label = core_dset.label
 
 
             
             #Store the new class or update the centroids based on the interaction with user
             if not known_for_real:
-                label_map_index[ground_truth_label] = len(label_map_index.keys())
+                #brainiac.label_2_index[ground_truth_label] = len(brainiac.label_2_index.keys())
                 brainiac.store_new_class(ground_truth_label)
             else:
                 brainiac.update_class(ground_truth_label)
 
-            m.update(model_prediciton, label_map_index[ground_truth_label], known, known_for_real)
+            m.update(model_prediciton, brainiac.label_2_index[ground_truth_label], known, known_for_real)
             if (iteration-1) % print_every == 0:
                 print(f"Total accuracy: {m.accuracy()}\nAccuracy per class: {m.class_accuracy()}\nOOD: {m.ood()}\nConfusion: {m.confusion()}")
             iteration += 1
     print(m.matrix)
-    with open(f"results/thresholds/matrix_t{OPT.THRESHOLD}.pkl", "wb") as f:
+    dir_path = f"results/{OPT.DISTANCE_TYPE}"
+    os.makedirs(dir_path, exist_ok=True)
+    with open(f"{dir_path}/matrix_t{format(OPT.THRESHOLD, '.2f')}.pkl", "wb") as f:
         pkl.dump(m, f)
 
 
 
-def first_iteration(core_dset, brainiac, label_map_index):
+def first_iteration(core_dset, brainiac):
     if not OPT.TEST_MODE:
         label = input("First class: what is it?\n")
     else:
@@ -112,13 +115,13 @@ def first_iteration(core_dset, brainiac, label_map_index):
         break
 
     brainiac.store_new_class(label)
-    label_map_index[label] = 0
+    #brainiac.label_2_index[label] = 0
    
 
 if __name__ == "__main__":
     with torch.no_grad():
-        THRESHOLDS = torch.arange(6.1, 7, 0.1)
+        THRESHOLDS = torch.arange(1.05, 1.3, 0.1).numpy()
         for t in THRESHOLDS:
-            OPT.THRESHOLD = t
+            OPT.THRESHOLD = round(t, 2)
             main()
     

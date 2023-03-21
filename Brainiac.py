@@ -21,6 +21,8 @@ class Brainiac():
         self.head = torch.tensor([])
         self.distance_type = distance_type
         self.index_2_label = {} #this is a variable that map indices to labels
+        self.label_2_index = {} #this is a variable that map labels to indices
+
 
     def predict(self, x):
         self.embeddings = self.model.encode_image(x) #store latest embeddings computed
@@ -34,6 +36,8 @@ class Brainiac():
         self.centroids[label] = self.embeddings.mean(dim = 0).detach()
         self.sigmas[label] = self.embeddings.std(dim = 0)
         self.index_2_label[len(self.index_2_label)] = label
+        self.label_2_index[label] = len(self.label_2_index)
+
 
     
     def update_class(self, label):
@@ -60,13 +64,19 @@ class Brainiac():
 
         if self.distance_type == "l1":
             return torch.cdist(self.embeddings.to(torch.float32), torch.stack([c.to(torch.float32) for c in self.centroids.values()]), p = 1)
-        
+
+        if self.distance_type == "inverse_cosine":
+            a = self.embeddings.to(torch.float32)
+            b = torch.stack([c.to(torch.float32) for c in self.centroids.values()])
+            norm = torch.sqrt(((a*a).sum(dim = 1).unsqueeze(1))@((b*b).sum(dim = 1).unsqueeze(1).T))
+            return torch.divide(norm, (a@b.T).abs())
+            
         if self.distance_type == "normalized_l2":
             distances = torch.tensor([]).to(OPT.DEVICE)
             for i, key in enumerate(self.centroids):
                 #if i == 0:
                 #    distances = ((self.embeddings - self.centroids[key].cur_avg)/self.sigmas[key]).mean(dim = -1).unsqueeze()
-                to_append = (torch.abs(self.embeddings - self.centroids[key].cur_avg)/self.sigmas[key]).mean(dim = -1).unsqueeze(-1)
+                to_append = (torch.abs(self.embeddings - self.centroids[key])/self.sigmas[key]).mean(dim = -1).unsqueeze(-1)
                 distances = torch.cat((distances, to_append), dim =1)
             return distances
 

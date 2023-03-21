@@ -44,8 +44,7 @@ def submit():
         cls_index = [k for k in dic if dic[k] == ss.user_input]
         if len(cls_index) == 0: #the class is new since it is not present in the dic
             ss.disable_new_infer = False
-            ss.brainiac.store_new_class(ss.user_input)
-            ss.cls_image_examples.append(ss.image)
+            ss.brainiac.store_new_class(ss.user_input, ss.image)
             ss.texthistory.write(f'$ class {ss.user_input} stored')
             ss.image_buffer = []
 
@@ -70,11 +69,11 @@ def on_inference_click():
             else:
                 stack = torch.stack(ss.image_buffer)
 
-            ss.prediction, ss.distances = ss.brainiac.forward_example(stack, first_iteration)
+            ss.brainiac.prediction, ss.brainiac.distances = ss.brainiac.forward_example(stack, first_iteration)
             
-            ss.known = check_known(ss.prediction, ss.distances, OPT.THRESHOLD)
-            label_pred = ss.brainiac.index_2_label[ss.prediction]
-            if ss.known:
+            ss.brainiac.known = check_known(ss.brainiac.prediction, ss.brainiac.distances, OPT.THRESHOLD)
+            label_pred = ss.brainiac.index_2_label[ss.brainiac.prediction]
+            if ss.brainiac.known:
                 ss.texthistory.write(f'$ I believe it is a {label_pred}. Am I right?')
                 ss.waiting_yn = True
             else:
@@ -97,9 +96,9 @@ def on_inference_click():
 def yes_func():
     ss.waiting_yn = False
     
-    if ss.known:
+    if ss.brainiac.known:
         #update when brainiac prediction when answer is right
-        label_pred = ss.brainiac.index_2_label[ss.prediction]
+        label_pred = ss.brainiac.index_2_label[ss.brainiac.prediction]
         ss.brainiac.update_class(label_pred)
         ss.texthistory.write(f"$ class {label_pred} updated")
         ss.disable_new_infer = False
@@ -114,17 +113,17 @@ def yes_func():
 
 def no_func():
 
-    if ss.known:
+    if ss.brainiac.known:
         ss.waiting_yn = False
         ss.texthistory.write("$ Dang. Would you tell me what this is then?")
 
     else:
-        label_pred = ss.brainiac.index_2_label[ss.prediction]
+        label_pred = ss.brainiac.index_2_label[ss.brainiac.prediction]
         ss.texthistory.write(f"$ Dang. Was it a {label_pred}?")
-        ss.known = True
+        ss.brainiac.known = True
         
 def clear_pred():
-    ss.prediction = None
+    ss.brainiac.prediction = None
     ss.count_click_photo += 1
     if (ss.image is not None) and (ss.count_click_photo%2 == 0):
         ss.image_buffer.append(ss.image)

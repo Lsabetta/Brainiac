@@ -5,6 +5,7 @@ from opt import OPT
 from webfunc import *
 import torchvision.transforms as T
 import torch.nn.functional as F
+from main import main as brainiac_main
 #alias for session_state
 ss = st.session_state
 # Set the page layout to wide
@@ -19,17 +20,13 @@ if 'texthistory' not in ss:
 
 if 'brainiac' not in ss:
     ss.brainiac = make_brainiac()
-    ss.prediction = None
-    ss.distances = None
-    ss.known = None
-if 'sframe_list' not in ss:
-    ss.sframe_list = []
-
-
+    if OPT.WEBAPP_PRETRAIN:
+        brainiac_main()
+    
+    
 
 if 'image' not in ss:
     ss.image = None
-    ss.cls_image_examples = []
     ss.image_buffer = []
     ss.count_click_photo = 0
 
@@ -49,13 +46,14 @@ left_column, right_column = st.columns([2, 3])
 
 with st.sidebar:
     transform = T.ToPILImage()
-    for i, img in enumerate(ss.cls_image_examples):
+    for i, label in enumerate(ss.brainiac.cls_image_examples):
         #st.markdown("""---""")
         l, c, r = st.columns([20, 2, 1])
         with c:
             st.button("x", key=f"x_{i}")
+        img = ss.brainiac.cls_image_examples[label]
         img = transform(img)
-        st.image(img, caption=ss.brainiac.index_2_label[i])
+        st.image(img, caption=label)
 
 with left_column:
     st.header("Console")
@@ -79,9 +77,9 @@ with left_column:
 
 
 with right_column:
-    if ss.prediction != None and ss.known:
-        cls_predicted = ss.brainiac.index_2_label[ss.prediction]
-    elif ss.prediction != None and not ss.known:
+    if ss.brainiac.prediction != None and ss.brainiac.known:
+        cls_predicted = ss.brainiac.index_2_label[ss.brainiac.prediction]
+    elif ss.brainiac.prediction != None and not ss.brainiac.known:
         cls_predicted = "New Class"
     else:
         cls_predicted = ""

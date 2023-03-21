@@ -22,7 +22,10 @@ class Brainiac():
         self.distance_type = distance_type
         self.index_2_label = {} #this is a variable that map indices to labels
         self.label_2_index = {} #this is a variable that map labels to indices
-
+        self.prediction = None
+        self.known = None
+        self.distances = None
+        self.cls_image_examples = {}
 
     def predict(self, x):
         self.embeddings = self.model.encode_image(x) #store latest embeddings computed
@@ -30,8 +33,9 @@ class Brainiac():
         prediction = torch.mode(torch.argmin(distances, dim = 1)).values.item()
         return prediction, distances
 
-    def store_new_class(self, label):
-        
+    def store_new_class(self, label, image):
+        if label not in self.cls_image_examples:
+            self.cls_image_examples[label] = image
         self.all_embeddings[label] = self.embeddings.detach()
         self.centroids[label] = self.embeddings.mean(dim = 0).detach()
         self.sigmas[label] = self.embeddings.std(dim = 0)

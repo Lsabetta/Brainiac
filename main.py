@@ -9,11 +9,14 @@ import glob
 import random
 from metrics import Metrics
 import pickle as pkl
-
+import streamlit as st
+CORE50_CLASSES = ["socket", "phone", "scissors", "bulb", "can", "glasses", "ball", "marker", "mug", "remote"]
+CORE_50_CLASSES_DICTIONARY = {i: CORE50_CLASSES[i] for i in range(10)}
+def _to_core50_label(obj_idx):
+    return CORE_50_CLASSES_DICTIONARY[(obj_idx-1)//5]
 
 def main():
     set_seeds(OPT.SEED)
-    CLASSES = ["socket", "phone", "scissors", "bulb", "can"]
     
     if OPT.TEST_MODE:
         OBJECT_IDS = [i for i in range(1, 51)]
@@ -23,7 +26,11 @@ def main():
     elif not OPT.TEST_MODE:
         OBJECT_IDS = [1+5*i for i in range(5)]
 
-    brainiac = Brainiac(OPT.MODEL, OPT.DISTANCE_TYPE)
+    if OPT.WEBAPP:
+        brainiac = st.session_state.brainiac
+    else:
+        brainiac = Brainiac(OPT.MODEL, OPT.DISTANCE_TYPE)
+
     iteration = 1
     m = Metrics()
     print_every = 1 if OPT.VERBOSE else 20
@@ -73,21 +80,22 @@ def main():
             if not OPT.TEST_MODE:
                 if iteration < 6:
                     known_for_real = False
-                    ground_truth_label = CLASSES.pop(0)
+                    ground_truth_label = CORE50_CLASSES.pop(0)
                 else:
                     #interact with the user based on if the class is thought already known or not
                     known_for_real, ground_truth_label  = verdict(model_prediciton, known, brainiac.label_2_index, video)
 
             elif OPT.TEST_MODE:
-                known_for_real = core_dset.label in brainiac.label_2_index
-                ground_truth_label = core_dset.label
+                ground_truth_label = _to_core50_label(core_dset.object_id)
+                known_for_real = ground_truth_label in brainiac.label_2_index
+                
 
 
             
             #Store the new class or update the centroids based on the interaction with user
             if not known_for_real:
                 #brainiac.label_2_index[ground_truth_label] = len(brainiac.label_2_index.keys())
-                brainiac.store_new_class(ground_truth_label)
+                brainiac.store_new_class(ground_truth_label, video[0] )
             else:
                 brainiac.update_class(ground_truth_label)
 
@@ -107,14 +115,14 @@ def first_iteration(core_dset, brainiac):
     if not OPT.TEST_MODE:
         label = input("First class: what is it?\n")
     else:
-        label = core_dset.label
+        label = _to_core50_label(core_dset.object_id)
 
 
     for (video, labels) in DataLoader(core_dset, batch_size=OPT.PROCESSING_FRAMES):
         brainiac.embeddings = brainiac.model.encode_image(video.to(OPT.DEVICE))
         break
 
-    brainiac.store_new_class(label)
+    brainiac.store_new_class(label, video[0])
     #brainiac.label_2_index[label] = 0
    
 

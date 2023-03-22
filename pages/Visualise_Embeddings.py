@@ -1,9 +1,12 @@
 import streamlit as st
 import plotly.express as px
+import plotly
 import numpy as np
 from sklearn.manifold import TSNE
 import pandas as pd
-import umap 
+from colors import colors
+#import umap 
+import umap.umap_ as umap
 ss = st.session_state
 @st.cache_data
 def make_UMAP_embedding(X, n_neighbours):
@@ -14,9 +17,9 @@ def make_TSNE_embedding(X, perplexity):
 if len(ss) != 0:
     X = ss.brainiac.all_embeddings
     labels = X.keys()
-    
-    labels_names = [[l]*len(X[l]) for l in labels]
 
+    labels_names = [[l]*len(X[l]) for i, l in enumerate(labels)]
+    
     X = np.array([x.cpu().numpy() for label in labels for x in X[label]])
 
     print("embeddings shape: ", X.shape)
@@ -24,25 +27,30 @@ if len(ss) != 0:
     print(n_neighbours)
 
     print(f"{labels=}")
-    r, l = st.columns([1,1])
-    with r:
+    l, r = st.columns([1,1])
+    color_discrete_sequence = colors
+    with l:
         st.header("Umap visualization")
         n_neighbours = st.slider("n neighbours", value = 5)
         X_embedded_UMAP = make_UMAP_embedding(X, n_neighbours)
         df_UMAP = pd.DataFrame(X_embedded_UMAP, columns = ["0", "1", "2"])
         df_UMAP["label"] = [i  for j in labels_names for i in j]
-        fig_UMAP = px.scatter_3d(df_UMAP, x="0", y="1", z="2", color = "label")
+         #plotly.colors.sequential.Viridis
+
+        fig_UMAP = px.scatter_3d(df_UMAP, x="0", y="1", z="2", color = "label",
+        color_discrete_sequence=color_discrete_sequence )
 
         st.plotly_chart(fig_UMAP, use_container_width=True, sharing="streamlit", theme="streamlit")
 
-    with l:
+    with r:
         st.header("TSNE visualization")
         perplexity = st.slider("Perplexity", value = 5)
         X_embedded_TSNE = make_TSNE_embedding(X, perplexity)
         df_TSNE = pd.DataFrame(X_embedded_TSNE, columns = ["0", "1", "2"])
         df_TSNE["label"] = [i  for j in labels_names for i in j]
-        fig_TSNE = px.scatter_3d(df_TSNE, x="0", y="1", z="2", color = "label")
+        fig_TSNE = px.scatter_3d(df_TSNE, x="0", y="1", z="2", color = "label",
+        color_discrete_sequence=color_discrete_sequence )
 
-        st.plotly_chart(fig_TSNE, use_container_width=True, sharing="streamlit", theme="streamlit")
+        st.plotly_chart(fig_TSNE, use_container_width=True, sharing="streamlit")
 else:
     st.header("0 image acquired")

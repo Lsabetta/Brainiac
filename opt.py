@@ -3,9 +3,10 @@ class OPT:
     THRESHOLD = 6.0
     MODEL = "CLIP"
     DEVICE='cuda:0'
-    PROCESSING_FRAMES = 15
+    PROCESSING_FRAMES = 1
     TEST_MODE = True
-    DISTANCE_TYPE = "l2"
+    DISTANCE_TYPE = "normalized_l2"
     VERBOSE = False
     WEBAPP = True
     WEBAPP_PRETRAIN = True
+

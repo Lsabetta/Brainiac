@@ -6,6 +6,7 @@ from webfunc import *
 import torchvision.transforms as T
 import torch.nn.functional as F
 from main import main as brainiac_main
+import copy
 #alias for session_state
 ss = st.session_state
 # Set the page layout to wide
@@ -52,7 +53,7 @@ with st.sidebar:
         l, c, r = st.columns([20, 2, 1])
         with c:
             st.button("x", key=f"x_{i}")
-        img = ss.brainiac.cls_image_examples[label]
+        img = copy.deepcopy(ss.brainiac.cls_image_examples[label])
         
         if i<10 and OPT.WEBAPP_PRETRAIN:
             img = Unnorm(img.detach())

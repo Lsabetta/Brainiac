@@ -44,6 +44,7 @@ print(ss.brainiac.index_2_label)
 
 left_column, right_column = st.columns([2, 3])
 
+
 with st.sidebar:
     transform = T.ToPILImage()
     for i, label in enumerate(ss.brainiac.cls_image_examples):
@@ -52,7 +53,11 @@ with st.sidebar:
         with c:
             st.button("x", key=f"x_{i}")
         img = ss.brainiac.cls_image_examples[label]
+        
+        if i<10 and OPT.WEBAPP_PRETRAIN:
+            img = Unnorm(img.detach())
         img = transform(img)
+    
         st.image(img, caption=label)
 
 with left_column:

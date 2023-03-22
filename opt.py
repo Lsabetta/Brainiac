@@ -5,7 +5,7 @@ class OPT:
     DEVICE='cuda:0'
     PROCESSING_FRAMES = 15
     TEST_MODE = True
-    DISTANCE_TYPE = "inverse_cosine"
+    DISTANCE_TYPE = "l2"
     VERBOSE = False
     WEBAPP = True
     WEBAPP_PRETRAIN = True

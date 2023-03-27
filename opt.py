@@ -9,4 +9,6 @@ class OPT:
     VERBOSE = False
     WEBAPP = False
     WEBAPP_PRETRAIN = False
-
+    DATA_PATH = '/home/pelosinf/data/'
+    PRINT_EVERY = 200
+    DATASET = 'CIFAR100'

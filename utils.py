@@ -5,6 +5,7 @@ import cv2
 from einops import rearrange
 from torchvision import transforms as trs
 import clip
+import open_clip
 from PIL import Image
 import torchshow as ts
 from opt import OPT
@@ -44,8 +45,11 @@ class RunningTensor:
 
 
 def get_model(model_name):
+
     if model_name == "CLIP":
         model, preprocessing = clip.load("ViT-B/32", device=OPT.DEVICE)
+    elif model_name == "openCLIP":
+        model, _, preprocessing = open_clip.create_model_and_transforms('ViT-H-14', pretrained='laion2b_s32b_b79k', device=OPT.DEVICE)
     else:
         model = timm.create_model(model_name, num_classes = 0, pretrained=True)
         preprocessing = lambda x: x

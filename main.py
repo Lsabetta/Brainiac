@@ -66,6 +66,7 @@ def main():
             if len(brainiac.centroids) == 0:
                 first_iteration(core_dset, brainiac)
                 iteration += 1
+                m.update_ood(known=False, known_for_real=False)
                 continue
             
             #compute distances from the known classes and tries to infer the predicted class (argmin(distances)) 
@@ -104,7 +105,7 @@ def main():
                 print(f"Total accuracy: {m.accuracy()}\nAccuracy per class: {m.class_accuracy()}\nOOD: {m.ood()}\nConfusion: {m.confusion()}")
             iteration += 1
     print(m.matrix)
-    dir_path = f"results/{OPT.DISTANCE_TYPE}"
+    dir_path = f"results/{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}"
     os.makedirs(dir_path, exist_ok=True)
     with open(f"{dir_path}/matrix_t{format(OPT.THRESHOLD, '.2f')}.pkl", "wb") as f:
         pkl.dump(m, f)
@@ -123,12 +124,12 @@ def first_iteration(core_dset, brainiac):
         break
 
     brainiac.store_new_class(label, video[0])
-    #brainiac.label_2_index[label] = 0
+    
    
 
 if __name__ == "__main__":
     with torch.no_grad():
-        THRESHOLDS = torch.arange(1.05, 1.3, 0.1).numpy()
+        THRESHOLDS = torch.arange(1.9, 2.1, 0.1).numpy()
         for t in THRESHOLDS:
             OPT.THRESHOLD = round(t, 2)
             main()

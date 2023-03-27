@@ -28,7 +28,7 @@ class Metrics():
         return [self.matrix[i, i]/self.matrix[:, i].sum() for i in range(self.matrix.shape[-1])]
     
     def ood(self):
-        if self.ood != 0:
+        if self.ood_den != 0:
             return self.ood_num/self.ood_den
         else:
             return None
@@ -56,6 +56,8 @@ class Metrics():
         #Non era nel dominio del modello e il modello lo ha capito #true positive
         if not known and not known_for_real: 
             self.ood_num += 1
+
+            
         if not known_for_real:
             self.ood_den += 1  
         else:

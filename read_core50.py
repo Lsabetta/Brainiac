@@ -2,11 +2,54 @@ import glob
 from opt import OPT
 from torch.utils.data import Dataset
 from PIL import Image
+import random 
+import cv2
+class AllCore50Dataset(Dataset):
+    """ Scenario Dataset for Core50 it requires a scenario number  """
+    
+    def __init__(self, data_path, finegrane=True, transform=None):
+        self.data_path = data_path+'/core50_128x128/'
+        self.transform = transform
+        self.finegrane = finegrane
+        self._set_data_and_labels()
+
+    def _set_data_and_labels(self):
+        """ Retrieve all paths and labels and shuffle them"""
+
+        # Retrieve all paths of the specified shenario
+        self.paths = glob.glob(self.data_path+'/*/*/*.png')
+        random.shuffle(self.paths)
+        self.labels = self._extract_labels_from_paths(self.paths)
+    
+    def _extract_labels_from_paths(self, paths):
+        labels = []
+        for path in paths:
+            # Corrects labels starting from 0 to 49
+            if self.finegrane:
+                labels.append(int(path.split('/')[-2][1:])-1)
+            else:
+                tmp = int(path.split('/')[-2][1:])-1
+                labels.append(tmp // 5)
+        return labels
+    
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, index):
+
+        x = Image.open(self.paths[index])
+
+        y = self.labels[index]
+        if self.transform:
+            x = self.transform(x)
+
+        return x, y
+
 
 class Core50Dataset(Dataset):
     """ Scenario Dataset for Core50 it requires a scenario number  """
     
-    def __init__(self, scenario_id, object_id, data_path='/home/luigi/Work/data', transform=None):
+    def __init__(self, scenario_id, object_id, data_path='/home/pelosinf/data', transform=None):
         self.data_path = data_path+'/core50_128x128/'
         self.transform = transform
         self.scenario_id = scenario_id

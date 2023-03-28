@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from utils import check_known, verdict, set_seeds
-from read_core50 import Core50Dataset
+from read_core50 import AllCore50Dataset
 from Brainiac import Brainiac
 import os
 from opt import OPT
@@ -11,26 +11,48 @@ from metrics import Metrics
 import pickle as pkl
 from torchvision import datasets, transforms
 from tqdm import tqdm
+import pandas as pd
+from torchvision.transforms import InterpolationMode as im
+
+
+
 
 def get_dataset(dset_name, transform):
-    if dset_name == 'CIFAR100':
+    
+    if dset_name == 'CIFAR100': # 0.65
         return datasets.CIFAR100(root=OPT.DATA_PATH, train=True, download=True, transform=transform)
-    elif dset_name == 'CIFAR10':
+    
+    elif dset_name == 'CIFAR10': # 0.91
         return datasets.CIFAR10(root=OPT.DATA_PATH, train=True, download=True, transform=transform)
-    elif dset_name == 'Flowers102':
+    
+    elif dset_name == 'Flowers102': #0.558
         return datasets.Flowers102(root=OPT.DATA_PATH, split='train', download=True, transform=transform)
+    
+    elif dset_name == 'INaturlist': # pesa troppo
+        return datasets.INaturalist(root=OPT.DATA_PATH, version='2017', download=True, transform=transform)
+    
+    elif dset_name == 'LFWPeople': 
+        return datasets.LFWPeople(root=OPT.DATA_PATH, split='10fold', download=True, transform=transform)
+    
+    elif dset_name == 'FGVCAircraft': 
+        return datasets.FGVCAircraft(root=OPT.DATA_PATH, train=True, download=True, transform=transform)
+    
     elif dset_name == 'CORE50':
-        pass
+        return AllCore50Dataset(OPT.DATA_PATH, finegrane=False, transform=transform)
     else:
         raise ValueError(f"Dataset {dset_name} not supported")
 
+
 def main():
+    dir_path = f"results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}"
+
     # Set the seed of the experiment
     set_seeds(OPT.SEED)
     
     # Define the brainiac
     brainiac = Brainiac(OPT.MODEL, OPT.DISTANCE_TYPE)
-    transform = brainiac.preprocessing
+    transform = brainiac.preprocessing 
+    #transforms.Compose([transforms.Resize((224, 224), im.BICUBIC),transforms.ToTensor()]) 
 
     # Get loader
     dataset = get_dataset(OPT.DATASET, transform)
@@ -39,6 +61,8 @@ def main():
     # Metric object
     pbar = tqdm(enumerate(dataset_loader), total=len(dataset_loader))
     m = Metrics()
+
+    df = pd.DataFrame(columns=['known', 'known_for_real', 'prediction', 'label', 'accuracy', 'ood', 'confusion'])
     for i, (image, label) in pbar:
         image = image.to(OPT.DEVICE)
         label = label.item()
@@ -66,13 +90,31 @@ def main():
 
             # Update the metrics
             m.update(brainiac_prediciton, brainiac.label_2_index[label], known, known_for_real)
+
+            # append row to dataframe
+            
+
+            new_row = {'known':known, 
+                            'known_for_real':known_for_real, 
+                            'prediction':brainiac_prediciton, 
+                            'label':label, 
+                            'accuracy':m.accuracy(), 
+                            'ood':m.ood(), 
+                            'confusion':m.confusion()}
+            
+            df.loc[len(df)] = new_row
+            
+
             if i % OPT.PRINT_EVERY == 0:
+                os.makedirs(dir_path, exist_ok=True)
+
                 pbar.set_description(f"Accuracy: {m.accuracy():.3f}")
+                df.to_csv(f"{dir_path}/metrics_{format(OPT.THRESHOLD, '.2f')}.csv", index=False)
                 #print(f"Total accuracy: {m.accuracy()}")#\nAccuracy per class: {m.class_accuracy()}\nOOD: {m.ood()}\nConfusion: {m.confusion()}")
-    
+
     print(m.matrix)
-    dir_path = f"results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}"
-    os.makedirs(dir_path, exist_ok=True)
+    
+    # THis saves the matrix
     with open(f"{dir_path}/matrix_t{format(OPT.THRESHOLD, '.2f')}.pkl", "wb") as f:
         pkl.dump(m, f)
 

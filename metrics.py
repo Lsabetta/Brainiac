@@ -22,7 +22,10 @@ class Metrics():
         self.update_ood(known, known_for_real)
     
     def accuracy(self):
-        return self.matrix.diagonal().sum()/self.matrix.sum()
+        if self.matrix.sum() != 0:
+            return self.matrix.diagonal().sum()/self.matrix.sum()
+        else:
+            return 0.
     
     def class_accuracy(self):
         return [self.matrix[i, i]/self.matrix[:, i].sum() for i in range(self.matrix.shape[-1])]
@@ -31,13 +34,13 @@ class Metrics():
         if self.ood_den != 0:
             return self.ood_num/self.ood_den
         else:
-            return None
+            return -1.
     
     def confusion(self):
         if self.confusion_den != 0: 
             return self.confusion_num/self.confusion_den
         else:
-            return None
+            return -1.
 
     def update_ood(self, known, known_for_real):
 

@@ -7,7 +7,7 @@ from utils import RunningTensor
 from opt import OPT
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
-
+import random
 class Brainiac():
     def __init__(self, model_name, distance_type) -> None:
         #super(Brainiac, self).__init__()
@@ -28,7 +28,7 @@ class Brainiac():
         self.cls_image_examples = {}
 
     def predict(self, x):
-        self.embeddings = self.model.encode_image(x) #store latest embeddings computed
+        self.embeddings = self.model.encode_image(x)
         distances = self.distance()
         prediction = torch.mode(torch.argmin(distances, dim = 1)).values.item()
         return prediction, distances
@@ -45,11 +45,12 @@ class Brainiac():
 
     
     def update_class(self, label):
-        
-        emb_mean = self.embeddings.mean(dim = 0).unsqueeze(0).detach()
-        self.all_embeddings[label] = torch.cat((self.all_embeddings[label], self.embeddings.detach()))
-        self.centroids[label] = self.all_embeddings[label].mean(dim=0)
-        self.sigmas[label] = self.all_embeddings[label].std(dim=0)
+        DESTINY = random.uniform(0,1)
+        if DESTINY < OPT.UPDATE_PROBABILITY:
+            emb_mean = self.embeddings.mean(dim = 0).unsqueeze(0).detach()
+            self.all_embeddings[label] = torch.cat((self.all_embeddings[label], self.embeddings.detach()))
+            self.centroids[label] = self.all_embeddings[label].mean(dim=0)
+            self.sigmas[label] = self.all_embeddings[label].std(dim=0)
 
         #n = self.centroids[label].n
         
@@ -73,7 +74,7 @@ class Brainiac():
             a = self.embeddings.to(torch.float32)
             b = torch.stack([c.to(torch.float32) for c in self.centroids.values()])
             norm = torch.sqrt(((a*a).sum(dim = 1).unsqueeze(1))@((b*b).sum(dim = 1).unsqueeze(1).T))
-            return torch.divide(norm, (a@b.T).abs())
+            return 1. - torch.divide((a@b.T), norm)
             
         if self.distance_type == "normalized_l2":
             distances = torch.tensor([]).to(OPT.DEVICE)

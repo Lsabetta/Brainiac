@@ -25,7 +25,7 @@ class Metrics():
         if self.matrix.sum() != 0:
             return self.matrix.diagonal().sum()/self.matrix.sum()
         else:
-            return 0.
+            return -1.
     
     def class_accuracy(self):
         return [self.matrix[i, i]/self.matrix[:, i].sum() for i in range(self.matrix.shape[-1])]

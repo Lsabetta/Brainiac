@@ -21,8 +21,11 @@ class Brainiac():
 
         # We use this to compute centroids and all sigmas
         # we store everything just for comodity...
-        self.all_embeddings = {}
         self.centroids = {}
+        self.squared_centroids = {}
+        self.covariance_matrices = {}
+        self.inverted_covariance_matrices = {}
+        self.ns = {}
         self.sigmas = {}
         
         # We use this dictionary to map the real classes
@@ -55,9 +58,12 @@ class Brainiac():
         """
         Connects the real label with the internal label representation of the Brainiac
         """
-        self.all_embeddings[label] = embeddings.detach()
         self.centroids[label] = embeddings.mean(dim = 0).detach()
-        self.sigmas[label] = embeddings.std(dim = 0)
+        self.squared_centroids[label] = self.centroids[label]**2
+        self.sigmas[label] = torch.ones((OPT.EMBEDDING_SIZE[OPT.MODEL])).to(device=OPT.DEVICE)
+        self.covariance_matrices[label] = torch.zeros((OPT.EMBEDDING_SIZE[OPT.MODEL], OPT.EMBEDDING_SIZE[OPT.MODEL])).to(device=OPT.DEVICE)
+        self.ns[label] = 1
+
         self.index_2_label[len(self.index_2_label)] = label
         self.label_2_index[label] = len(self.label_2_index)
 
@@ -73,9 +79,18 @@ class Brainiac():
                 label = self.index_2_label[self.last_prediction]
             else:
                 return
-        self.all_embeddings[label] = torch.cat((self.all_embeddings[label], embeddings.detach()))
-        self.centroids[label] = self.all_embeddings[label].mean(dim=0)
-        self.sigmas[label] = self.all_embeddings[label].std(dim=0)
+
+        self.ns[label] += 1
+        self.centroids[label] = (self.centroids[label]*(self.ns[label] - 1) + embeddings.mean(dim = 0).detach())/self.ns[label]
+        self.squared_centroids[label] = (self.squared_centroids[label]*(self.ns[label] - 1) + embeddings.mean(dim = 0).detach()**2)/self.ns[label]
+        self.sigmas[label] = torch.sqrt((self.squared_centroids[label] - self.centroids[label]**2 + 10e-5)*self.ns[label]/(self.ns[label]-1))
+        
+        
+        self.covariance_matrices[label] = ((self.ns[label]-1)*self.covariance_matrices[label] + 
+                                           torch.outer((embeddings.squeeze(0)-self.centroids[label]),(embeddings.squeeze(0)-self.centroids[label]))
+                                           )/(self.ns[label])
+      
+        self.inverted_covariance_matrices[label] = torch.inverse((1-10e-4)* self.covariance_matrices[label] + 10e-4*torch.eye(OPT.EMBEDDING_SIZE[OPT.MODEL]).to(OPT.DEVICE))
 
 
     def distance(self, embeddings):
@@ -106,9 +121,19 @@ class Brainiac():
         # Normalized, needs sigmas of all 512 dimension of all each centroids
         if self.distance_type == "normalized_l2":
             distances = torch.tensor([]).to(OPT.DEVICE)
-            for i, key in enumerate(self.centroids):
-                to_append = (torch.abs(embeddings - self.centroids[key])/self.sigmas[key]).mean(dim = -1).unsqueeze(-1)
+            for i, label in enumerate(self.centroids):
+                to_append = (torch.abs(embeddings - self.centroids[label])/self.sigmas[label]).mean(dim = -1).unsqueeze(-1)
                 distances = torch.cat((distances, to_append), dim =1)
+            return distances
+        
+        if self.distance_type == "mahalanobis":
+            distances = torch.tensor([]).to(OPT.DEVICE)
+            for i, label in enumerate(self.centroids):
+                if self.ns[label] == 1:
+                    distances = torch.cat((distances, torch.ones((1,1)).to(OPT.DEVICE)), dim = 1)
+                else:
+                    to_append = (embeddings - self.centroids[label]).mean(dim = 0)@self.inverted_covariance_matrices[label]@(embeddings - self.centroids[label]).mean(dim = 0)
+                    distances = torch.cat((distances, to_append.unsqueeze(0).unsqueeze(0)), dim = 1)
             return distances
 
         raise(f'Distance {self.distance_type} not implemented')

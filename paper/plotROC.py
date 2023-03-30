@@ -5,57 +5,71 @@ import torch
 import sklearn
 import sklearn.metrics
 from opt import OPT
-import matplotlib as mpl
+import numpy as np
 
-OODs = [1]
-type1_ood_errors = [1]
-OPT.DISTANCE_TYPE = "inverse_cosine"
+OPT.DISTANCE_TYPEs = ["l2", "inverse_cosine"]
+labels = ["l2", "CosDist"]
+#lens_labels = [len(l) for l in labels]
+#labels = [l + " "*(max(lens_labels)-len(l)) for l in labels] 
 OPT.MODEL = "openCLIP"
 OPT.PROCESSING_FRAMES = 1
+OPT.UPDATE_PROBABILITY = 1
+colors_dots = ["#E37D43", '#FFB6C1']
+colors_line = ['#98292B', '#C1E1C1']
+colors_fill = ["#26868E", "#ADD8E6"]
 
-dir_path = f"results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}"
-paths = glob.glob(dir_path + "/*.pkl")
-thresholds =  [float(".".join(p.split("_")[-1].split(".")[:-1])[1:]) for p in paths]
-thresholds.sort()
-path = dir_path + f"/matrix_t"
+for i, d in enumerate(OPT.DISTANCE_TYPEs):
+    OODs = [1]
+    type1_ood_errors = [1]
+    distances_from_v = [1]
+    color_dots = colors_dots[i]
+    color_line = colors_line[i]
+    color_fill = colors_fill[i]
+    dir_path = f"/home/leonardolabs/Documents/Brainiac/paper/results/{OPT.DATASET}_{d}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}_sl{OPT.SELF_LEARNING}"
+    print(dir_path)
+    paths = glob.glob(dir_path + "/*.pkl")
+    thresholds =  [float(".".join(p.split("_")[-1].split(".")[:-1])[1:]) for p in paths]
+    thresholds.sort()
+    path = dir_path + f"/matrix_t"
+    matrices_paths = [path + f"{format(t, '.2f')}.pkl" for t in thresholds]
 
-matrices_paths = [path + f"{format(t, '.2f')}.pkl" for t in thresholds]
-#
+    for j, p in enumerate(matrices_paths):
+        with open(p, "rb") as f:
+            m = pkl.load(f)
+            type1_ood_errors.append(m.type1_ood_error())
+            OODs.append(m.ood())
+    thresholds = [0] + thresholds
+    type1_ood_errors.append(0.)
+    OODs.append(0.)
+    
+    AUC = sklearn.metrics.auc(type1_ood_errors, OODs)
+   
+    plt.plot(type1_ood_errors, OODs, color = color_line, lw = "2", label = f"{labels[i]}\nAUC = {round(AUC, 4)}, ACC = {round(m.accuracy(), 4)}")
+    plt.fill_between(type1_ood_errors, OODs, color = color_fill, alpha = 0.8)
+    for k, t in enumerate(thresholds):
+        if t == 0:
+            continue
+        print(t, type1_ood_errors[k], OODs[k])
+        distances_from_v.append(np.sqrt((0.05*(1-OODs[k]))**2 + (type1_ood_errors[k])**2))
+    min_idx = np.argmin(distances_from_v)
+    
+    plt.plot(type1_ood_errors[min_idx], OODs[min_idx], color = color_dots, marker = "o", )
+    plt.text(type1_ood_errors[min_idx], 0.6*OODs[min_idx], f"t = {str(round(thresholds[min_idx], 2))}", color = "w", fontsize = 12)
+   
 
-for i, p in enumerate(matrices_paths):
-    with open(p, "rb") as f:
-        m = pkl.load(f)
-        type1_ood_errors.append(m.type1_ood_error())
-        OODs.append(m.ood())
-thresholds = [0] + thresholds
-type1_ood_errors.append(0.)
-OODs.append(0.)
-
-plt.plot(type1_ood_errors, OODs, 'b')
-plt.fill_between(type1_ood_errors, OODs)
-for i, t in enumerate(thresholds):
-    if t == 0:
-        continue
-    if i%1 == 0:
-        plt.plot(type1_ood_errors[i], OODs[i], "ro")
-        plt.text(type1_ood_errors[i], 1.1*OODs[i], f"t = {str(round(t, 2))}")
-        #plt.annotate(f"t = {str(round(t, 2))}", (type1_ood_errors[i], OODs[i]), xytext=(-15, 5), textcoords = "offset points", marker=".")
-    print(t, type1_ood_errors[i], OODs[i]) 
-plt.legend(loc = 'lower right')
-AUC = sklearn.metrics.auc(type1_ood_errors, OODs)
+plt.legend(loc = 'lower left')
 xmin = 0.001
-ymin = 0.001
-plt.plot(torch.arange(xmin, 1, 0.001), torch.arange(xmin, 1, 0.001),'r--')
+ymin = 0.
+plt.plot(torch.arange(xmin, 1, 0.001), torch.arange(xmin, 1, 0.001),color = color_line, ls = "--", lw = "3")
 
 plt.xlim([xmin, 1])
 plt.ylim([ymin, 1])
 plt.xscale("log")
-plt.yscale("log")
+#plt.yscale("log")
 plt.grid()
-plt.text(0.2, 0.1, f"AUC = {round(AUC, 4)}\nACC = {round(m.accuracy(), 4)}")
 
 plt.ylabel('OOD')
 plt.xlabel('Type 1 OOD err.')
 #plt.show()
 
-plt.savefig(f"{dir_path}/OODs_vs_type1_ood_error.pdf")
+plt.savefig(f"/home/leonardolabs/Documents/Brainiac/paper/results/OODs_vs_type1_ood_error_{OPT.DATASET}.pdf")

@@ -11,20 +11,25 @@ DSET_N_CLASSES = {
               
               }
 
+
 class OPT:
     SEED = 0
 
     MODEL = "openCLIP"
     DEVICE='cuda:0'
 
-    DISTANCE_TYPE = "l2"
+    DISTANCE_TYPE = "inverse_cosine"
     DATA_PATH = '/home/leonardolabs/data/'
     PRINT_EVERY = 200
-    DATASET = 'CelebA'
+    DATASET = 'CIFAR100'
     N_CLASSES = DSET_N_CLASSES[DATASET]
     SHUFFLED_SCENARIOS = "shuffled"#/ordered
     OBJ_PER_CLASS = 5
-    SELF_LEARNING = True
-    THRESHOLDS = [6.7]#torch.arange(0.25, 0.55, 0.05).numpy()
+    SELF_LEARNING = False
+    THRESHOLDS = [0.4]#torch.arange(13, 20, 1).numpy()
     PROBABILITIES = [1]#torch.arange(0., 1.1, 0.1).numpy()
     FRAMES = [1]#[1, 10, 20, 30]
+    EMBEDDING_SIZE = {
+        'CLIP' : 512,
+        'openCLIP' : 1024,          
+    }

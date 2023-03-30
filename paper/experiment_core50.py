@@ -16,7 +16,7 @@ def _to_core50_label(obj_idx, obj_per_class):
 
 
 def main():
-    dir_path = f"results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}"
+    dir_path = f"/home/leonardolabs/Documents/Brainiac/paper/results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}_sl{OPT.SELF_LEARNING}"
     
     # Set the seed of the experiment
     set_seeds(OPT.SEED)
@@ -24,7 +24,7 @@ def main():
     df = pd.DataFrame(columns=['known', 'known_for_real', 'prediction', 'label', 'accuracy', 'ood', 'type1_ood_error', "moving_avg"])
 
     brainiac = Brainiac(OPT.MODEL, OPT.DISTANCE_TYPE)
-
+    min_distances = []
     pairs = prepare_scenario_obj_pairs()
     pbar = tqdm(enumerate(pairs), total=len(pairs))
     m = Metrics(OPT.N_CLASSES)
@@ -57,7 +57,7 @@ def main():
 
         ground_truth_label = _to_core50_label(core_dset.object_id, OPT.OBJ_PER_CLASS)
         known_for_real = ground_truth_label in brainiac.label_2_index
-            
+        min_distances.append(distances[0,model_prediciton])
         #Store the new class or update the centroids based on the interaction with user
         if not known_for_real:
             brainiac.store_new_centroid(embeddings, ground_truth_label)
@@ -84,13 +84,15 @@ def main():
             # This saves the matrix as pickle
             with open(f"{dir_path}/matrix_t{OPT.THRESHOLD:.2f}.pkl", "wb") as f:
                 pkl.dump(m, f)
-    
+    min_distances = torch.tensor(min_distances)
     print(m.cls_confusion_matrix)
     print(m.ood_confusion_matrix)
+    #print("all: ", min_distances, "\nmean: ", min_distances.mean(), "\nmax: ",min_distances.max(), "\nmin: ",min_distances.min(), "\nmedian: ",min_distances.median())
 
 
 if __name__ == "__main__":
     with torch.no_grad():
+        OPT.DATASET = "Core50"
         for t in OPT.THRESHOLDS:
             for p in OPT.PROBABILITIES:
                 for f in OPT.FRAMES:

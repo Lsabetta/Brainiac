@@ -58,10 +58,10 @@ class Brainiac():
         """
         Connects the real label with the internal label representation of the Brainiac
         """
-        self.centroids[label] = embeddings.mean(dim = 0).detach()
-        self.squared_centroids[label] = self.centroids[label]**2
-        self.sigmas[label] = torch.ones((OPT.EMBEDDING_SIZE[OPT.MODEL])).to(device=OPT.DEVICE)
-        self.covariance_matrices[label] = torch.zeros((OPT.EMBEDDING_SIZE[OPT.MODEL], OPT.EMBEDDING_SIZE[OPT.MODEL])).to(device=OPT.DEVICE)
+        self.centroids[label] = embeddings.mean(dim = 0).detach().to('cpu')
+        self.squared_centroids[label] = (self.centroids[label]**2).detach().to('cpu')
+        self.sigmas[label] = torch.ones((OPT.EMBEDDING_SIZE[OPT.MODEL])).detach().to('cpu')
+        self.covariance_matrices[label] = torch.zeros((OPT.EMBEDDING_SIZE[OPT.MODEL], OPT.EMBEDDING_SIZE[OPT.MODEL])).detach().to('cpu')
         self.ns[label] = 1
 
         self.index_2_label[len(self.index_2_label)] = label
@@ -81,17 +81,17 @@ class Brainiac():
                 return
 
         self.ns[label] += 1
-        self.centroids[label] = (self.centroids[label]*(self.ns[label] - 1) + embeddings.mean(dim = 0).detach())/self.ns[label]
-        self.squared_centroids[label] = (self.squared_centroids[label]*(self.ns[label] - 1) + embeddings.mean(dim = 0).detach()**2)/self.ns[label]
-        self.sigmas[label] = torch.sqrt((self.squared_centroids[label] - self.centroids[label]**2 + 10e-5)*self.ns[label]/(self.ns[label]-1))
         
-        
-        self.covariance_matrices[label] = ((self.ns[label]-1)*self.covariance_matrices[label] + 
-                                           torch.outer((embeddings.squeeze(0)-self.centroids[label]),(embeddings.squeeze(0)-self.centroids[label]))
-                                           )/(self.ns[label])
-      
-        self.inverted_covariance_matrices[label] = torch.inverse((1-10e-4)* self.covariance_matrices[label] + 10e-4*torch.eye(OPT.EMBEDDING_SIZE[OPT.MODEL]).to(OPT.DEVICE))
+        self.centroids[label] = (self.centroids[label].to(OPT.DEVICE)*(self.ns[label] - 1) + embeddings.mean(dim = 0))/self.ns[label]
 
+        #self.squared_centroids[label] = (self.squared_centroids[label]*(self.ns[label] - 1) + embeddings.mean(dim = 0).detach()**2)/self.ns[label]
+        #self.sigmas[label] = torch.sqrt((self.squared_centroids[label] - self.centroids[label]**2 + 10e-5)*self.ns[label]/(self.ns[label]-1))
+        
+        
+        #self.covariance_matrices[label] = ((self.ns[label]-1)*self.covariance_matrices[label] + torch.outer((embeddings.squeeze(0)-self.centroids[label]), (embeddings.squeeze(0)-self.centroids[label])))/(self.ns[label])
+      
+        #self.inverted_covariance_matrices[label] = torch.inverse((1-10e-4)* self.covariance_matrices[label] + 10e-4*torch.eye(OPT.EMBEDDING_SIZE[OPT.MODEL]).to(OPT.DEVICE))
+    
 
     def distance(self, embeddings):
         """
@@ -105,7 +105,7 @@ class Brainiac():
         """
         # L2 distance
         if self.distance_type == "l2":
-            return torch.cdist(embeddings.to(torch.float32), torch.stack([c.to(torch.float32) for c in self.centroids.values()]))
+            return torch.cdist(embeddings.to(torch.float32), torch.stack([c.to(torch.float32).to(OPT.DEVICE) for c in self.centroids.values()]))
 
         # L1 distance
         if self.distance_type == "l1":
@@ -114,7 +114,7 @@ class Brainiac():
         # Cosine similarity
         if self.distance_type == "inverse_cosine":
             a = embeddings.to(torch.float32)
-            b = torch.stack([c.to(torch.float32) for c in self.centroids.values()])
+            b = torch.stack([c.to(torch.float32).to(OPT.DEVICE) for c in self.centroids.values()])
             norm = torch.sqrt(((a*a).sum(dim = 1).unsqueeze(1))@((b*b).sum(dim = 1).unsqueeze(1).T))
             return 1. - torch.divide((a@b.T), norm)
         

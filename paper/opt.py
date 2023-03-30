@@ -16,12 +16,12 @@ class OPT:
     SEED = 0
 
     MODEL = "openCLIP"
-    DEVICE='cuda:0'
+    DEVICE='cuda:1'
 
     DISTANCE_TYPE = "inverse_cosine"
     DATA_PATH = '/home/leonardolabs/data/'
     PRINT_EVERY = 200
-    DATASET = 'CIFAR100'
+    DATASET = 'CelebA'
     N_CLASSES = DSET_N_CLASSES[DATASET]
     SHUFFLED_SCENARIOS = "shuffled"#/ordered
     OBJ_PER_CLASS = 5

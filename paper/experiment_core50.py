@@ -16,7 +16,7 @@ def _to_core50_label(obj_idx, obj_per_class):
 
 
 def main():
-    dir_path = f"/home/leonardolabs/Documents/Brainiac/paper/results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}_sl{OPT.SELF_LEARNING}"
+    dir_path = f"/home/luigi/Work/Brainiac/paper/results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}_sl{OPT.SELF_LEARNING}"
     
     # Set the seed of the experiment
     set_seeds(OPT.SEED)
@@ -49,7 +49,7 @@ def main():
         #compute distances from the known classes and tries to infer the predicted class (argmin(distances)) 
         # iterates 1 time to extract exactly #processing_frames images  
         for (video, labels) in DataLoader(core_dset, batch_size=OPT.PROCESSING_FRAMES):
-            model_prediciton, embeddings, distances = brainiac.predict(video.to(OPT.DEVICE))
+            model_prediciton, embeddings, distances = brainiac.predict(video.to(OPT.DEVICE), iteration)
             break
 
         #check if the object is known or not, based on the distance from the closest centroid
@@ -92,12 +92,13 @@ def main():
 
 if __name__ == "__main__":
     with torch.no_grad():
-        OPT.DATASET = "Core50"
+        OPT.DATASET = "CORE50"
         for t in OPT.THRESHOLDS:
             for p in OPT.PROBABILITIES:
                 for f in OPT.FRAMES:
                     OPT.THRESHOLD = round(t, 2)
                     OPT.UPDATE_PROBABILITY = round(p, 2)
                     OPT.PROCESSING_FRAMES = f
+                    print(f"prob: {p}, frames: {f}, threshold:{t}")
                     main()
     

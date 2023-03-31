@@ -36,7 +36,7 @@ class Brainiac():
         self.last_prediction = None
 
 
-    def predict(self, x):
+    def predict(self, x, iteration):
         """ 
         Return prediction and distances with respect to the centroids 
         The prediction is calculated as the mode calculated over the batch
@@ -49,7 +49,7 @@ class Brainiac():
             distances, torch.tensor(processing_frames, len(centroids))
         """
         embeddings = self.model.encode_image(x)
-        distances = self.distance(embeddings)
+        distances = self.distance(embeddings, iteration, distance_type=self.distance_type)
         self.last_prediction = torch.mode(torch.argmin(distances, dim = 1)).values.item()
         return self.last_prediction, embeddings, distances 
 
@@ -59,8 +59,8 @@ class Brainiac():
         Connects the real label with the internal label representation of the Brainiac
         """
         self.centroids[label] = embeddings.mean(dim = 0).detach().to('cpu')
-        self.squared_centroids[label] = (self.centroids[label]**2).detach().to('cpu')
-        self.sigmas[label] = torch.ones((OPT.EMBEDDING_SIZE[OPT.MODEL])).detach().to('cpu')
+        self.squared_centroids[label] = (self.centroids[label]**2).to(OPT.DEVICE)#.detach().to('cpu')
+        self.sigmas[label] = torch.ones((OPT.EMBEDDING_SIZE[OPT.MODEL])).detach().to(OPT.DEVICE)#.to('cpu')
         self.covariance_matrices[label] = torch.zeros((OPT.EMBEDDING_SIZE[OPT.MODEL], OPT.EMBEDDING_SIZE[OPT.MODEL])).detach().to('cpu')
         self.ns[label] = 1
 
@@ -84,8 +84,8 @@ class Brainiac():
         
         self.centroids[label] = (self.centroids[label].to(OPT.DEVICE)*(self.ns[label] - 1) + embeddings.mean(dim = 0))/self.ns[label]
 
-        #self.squared_centroids[label] = (self.squared_centroids[label]*(self.ns[label] - 1) + embeddings.mean(dim = 0).detach()**2)/self.ns[label]
-        #self.sigmas[label] = torch.sqrt((self.squared_centroids[label] - self.centroids[label]**2 + 10e-5)*self.ns[label]/(self.ns[label]-1))
+        self.squared_centroids[label] = (self.squared_centroids[label]*(self.ns[label] - 1) + embeddings.mean(dim = 0).detach()**2)/self.ns[label]
+        self.sigmas[label] = torch.sqrt((self.squared_centroids[label] - self.centroids[label]**2 + 10e-5)*self.ns[label]/(self.ns[label]-1))
         
         
         #self.covariance_matrices[label] = ((self.ns[label]-1)*self.covariance_matrices[label] + torch.outer((embeddings.squeeze(0)-self.centroids[label]), (embeddings.squeeze(0)-self.centroids[label])))/(self.ns[label])
@@ -93,7 +93,7 @@ class Brainiac():
         #self.inverted_covariance_matrices[label] = torch.inverse((1-10e-4)* self.covariance_matrices[label] + 10e-4*torch.eye(OPT.EMBEDDING_SIZE[OPT.MODEL]).to(OPT.DEVICE))
     
 
-    def distance(self, embeddings):
+    def distance(self, embeddings, iteration, distance_type = "inverse_cosine"):
         """
         Computes the distance between embeddings and centroids, based on the distance, type
 
@@ -104,30 +104,46 @@ class Brainiac():
             distances: torch.tensor(1,len(centroids))
         """
         # L2 distance
-        if self.distance_type == "l2":
+        if distance_type == "l2":
             return torch.cdist(embeddings.to(torch.float32), torch.stack([c.to(torch.float32).to(OPT.DEVICE) for c in self.centroids.values()]))
 
         # L1 distance
-        if self.distance_type == "l1":
+        if distance_type == "l1":
             return torch.cdist(embeddings.to(torch.float32), torch.stack([c.to(torch.float32) for c in self.centroids.values()]), p = 1)
 
         # Cosine similarity
-        if self.distance_type == "inverse_cosine":
+        if distance_type == "inverse_cosine":
             a = embeddings.to(torch.float32)
             b = torch.stack([c.to(torch.float32).to(OPT.DEVICE) for c in self.centroids.values()])
             norm = torch.sqrt(((a*a).sum(dim = 1).unsqueeze(1))@((b*b).sum(dim = 1).unsqueeze(1).T))
             return 1. - torch.divide((a@b.T), norm)
         
         # Normalized, needs sigmas of all 512 dimension of all each centroids
-        if self.distance_type == "normalized_l2":
+        if distance_type == "normalized_l2":
             distances = torch.tensor([]).to(OPT.DEVICE)
             for i, label in enumerate(self.centroids):
                 numerator = (embeddings - self.centroids[label].to(OPT.DEVICE))**2
-                to_append = torch.sqrt(numerator/self.sigmas[label].to(OPT.DEVICE)).mean(dim = -1).unsqueeze(-1)
+                denominator = self.sigmas[label].to(OPT.DEVICE)**2
+                to_append = torch.sqrt((numerator/denominator).mean(dim = -1)).unsqueeze(-1)
                 distances = torch.cat((distances, to_append), dim =1)
             return distances
+
+        if distance_type == "mix_l2":
+            if iteration > 500:
+                OPT.THRESHOLD = 0.6
+                distances = torch.tensor([]).to(OPT.DEVICE)
+                for i, label in enumerate(self.centroids):
+                    numerator = (embeddings - self.centroids[label].to(OPT.DEVICE))**2
+                    denominator = self.sigmas[label].to(OPT.DEVICE)**2
+                    to_append = torch.sqrt((numerator/denominator).mean(dim = -1)).unsqueeze(-1)
+                    distances = torch.cat((distances, to_append), dim =1)
+                return distances
+                
+            else: 
+                OPT.THRESHOLD = 18
+                return torch.cdist(embeddings.to(torch.float32), torch.stack([c.to(torch.float32).to(OPT.DEVICE) for c in self.centroids.values()]))
         
-        if self.distance_type == "mahalanobis":
+        if distance_type == "mahalanobis":
             distances = torch.tensor([]).to(OPT.DEVICE)
             for i, label in enumerate(self.centroids):
                 if self.ns[label] == 1:

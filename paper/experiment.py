@@ -15,6 +15,7 @@ def main():
 
     # Set the seed of the experiment
     set_seeds(OPT.SEED)
+
     
     # Define the brainiac
     brainiac = Brainiac(OPT.MODEL, OPT.DISTANCE_TYPE)
@@ -28,7 +29,6 @@ def main():
     # Metric object
     pbar = tqdm(enumerate(dataset_loader), total=len(dataset_loader))
     m = Metrics(OPT.N_CLASSES)
-
     df = pd.DataFrame(columns=['known', 'known_for_real', 'prediction', 'label', 'accuracy', 'ood', 'type1_ood_error', "moving_avg"])
 
     for i, (image, label) in pbar:
@@ -42,7 +42,7 @@ def main():
             m.update(pred=None, gt=None, known=False, known_for_real=False)
         else:
 
-            brainiac_prediciton, embeddings, distances = brainiac.predict(image)
+            brainiac_prediciton, embeddings, distances = brainiac.predict(image, i)
 
             #check if the object is known or not, based on the distance from the closest centroid
             known = check_known(brainiac_prediciton, distances, OPT.THRESHOLD)

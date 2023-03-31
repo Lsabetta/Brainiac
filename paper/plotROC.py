@@ -7,16 +7,17 @@ import sklearn.metrics
 from opt import OPT
 import numpy as np
 
-OPT.DISTANCE_TYPEs = ["normalized_l2"]#["l2", "inverse_cosine"]
-labels = ["normalized l2"]#["l2", "CosDist"]
+OPT.DISTANCE_TYPEs = ["l2", "inverse_cosine"]#, "normalized_l2"]#["l2", "inverse_cosine"]
+labels = ["l2", "CosDist"]#, "Normalized l2"]
 #lens_labels = [len(l) for l in labels]
-#labels = [l + " "*(max(lens_labels)-len(l)) for l in labels] 
+#labels = [l + " "*(max(lens_labels)-len(l)) for l in labels]
+OPT.DATASET = 'CORE50'
 OPT.MODEL = "openCLIP"
 OPT.PROCESSING_FRAMES = 1
 OPT.UPDATE_PROBABILITY = 1
-colors_dots = ["#E37D43", '#FFB6C1']
-colors_line = ['#98292B', '#C1E1C1']
-colors_fill = ["#26868E", "#ADD8E6"]
+colors_dots = ["#E37D43", '#FFB6C1']#, '#32212B']
+colors_line = ['#98292B', '#C1E1C1']#, '#428362']
+colors_fill = ["#26868E", "#77B342"]#, '#ADD8E6']
 
 for i, d in enumerate(OPT.DISTANCE_TYPEs):
     OODs = [1]
@@ -25,7 +26,7 @@ for i, d in enumerate(OPT.DISTANCE_TYPEs):
     color_dots = colors_dots[i]
     color_line = colors_line[i]
     color_fill = colors_fill[i]
-    dir_path = f"/home/leonardolabs/Documents/Brainiac/paper/results/{OPT.DATASET}_{d}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}_sl{OPT.SELF_LEARNING}"
+    dir_path = f"/home/luigi/Work/Brainiac/paper/results/{OPT.DATASET}_{d}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}_sl{OPT.SELF_LEARNING}"
     print(dir_path)
     paths = glob.glob(dir_path + "/*.pkl")
     thresholds =  [float(".".join(p.split("_")[-1].split(".")[:-1])[1:]) for p in paths]
@@ -45,7 +46,7 @@ for i, d in enumerate(OPT.DISTANCE_TYPEs):
     AUC = sklearn.metrics.auc(type1_ood_errors, OODs)
    
     plt.plot(type1_ood_errors, OODs, color = color_line, lw = "2", label = f"{labels[i]}\nAUC = {round(AUC, 4)}, ACC = {round(m.accuracy(), 4)}")
-    plt.fill_between(type1_ood_errors, OODs, color = color_fill, alpha = 0.8)
+    plt.fill_between(type1_ood_errors, OODs, color = color_fill, alpha = 0.5)
     for k, t in enumerate(thresholds):
         if t == 0:
             continue
@@ -72,4 +73,4 @@ plt.ylabel('OOD')
 plt.xlabel('Type 1 OOD err.')
 #plt.show()
 
-plt.savefig(f"/home/leonardolabs/Documents/Brainiac/paper/results/OODs_vs_type1_ood_error_{OPT.DATASET}.pdf")
+plt.savefig(f"{ '/'.join(dir_path.split('/')[:-1])}/OODs_vs_type1_ood_error_{OPT.DATASET}.pdf")

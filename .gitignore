@@ -1,3 +1,5 @@
+
 __pycache__/
-paper/results/
-**/*.pkl
+paper/results/CelebA*
+#**/*.pkl
+results

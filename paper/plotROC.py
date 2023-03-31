@@ -7,8 +7,8 @@ import sklearn.metrics
 from opt import OPT
 import numpy as np
 
-OPT.DISTANCE_TYPEs = ["l2", "inverse_cosine"]
-labels = ["l2", "CosDist"]
+OPT.DISTANCE_TYPEs = ["normalized_l2"]#["l2", "inverse_cosine"]
+labels = ["normalized l2"]#["l2", "CosDist"]
 #lens_labels = [len(l) for l in labels]
 #labels = [l + " "*(max(lens_labels)-len(l)) for l in labels] 
 OPT.MODEL = "openCLIP"

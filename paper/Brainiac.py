@@ -122,7 +122,8 @@ class Brainiac():
         if self.distance_type == "normalized_l2":
             distances = torch.tensor([]).to(OPT.DEVICE)
             for i, label in enumerate(self.centroids):
-                to_append = (torch.abs(embeddings - self.centroids[label])/self.sigmas[label]).mean(dim = -1).unsqueeze(-1)
+                numerator = (embeddings - self.centroids[label].to(OPT.DEVICE))**2
+                to_append = torch.sqrt(numerator/self.sigmas[label].to(OPT.DEVICE)).mean(dim = -1).unsqueeze(-1)
                 distances = torch.cat((distances, to_append), dim =1)
             return distances
         

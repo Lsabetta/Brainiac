@@ -21,6 +21,7 @@ if 'texthistory' not in ss:
 
 if 'brainiac' not in ss:
     ss.brainiac = make_brainiac()
+    ss.n_class_core50 = 10
     if OPT.WEBAPP_PRETRAIN:
         brainiac_main()
     
@@ -57,7 +58,7 @@ with st.sidebar:
             st.button("x", key=f"x_{i}", on_click=del_class, args=(label,))
         img = copy.deepcopy(ss.brainiac.cls_image_examples[label])
         
-        if i<10 and OPT.WEBAPP_PRETRAIN:
+        if i<ss.n_class_core50 and OPT.WEBAPP_PRETRAIN:
             img = Unnorm(img.detach())
         img = transform(img)
     

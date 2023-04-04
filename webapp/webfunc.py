@@ -121,6 +121,7 @@ def no_func():
         label_pred = ss.brainiac.index_2_label[ss.brainiac.prediction]
         ss.texthistory.write(f"$ Dang. Was it a {label_pred}?")
         ss.brainiac.known = True
+
     
 def del_class(label):
     #temp_label_2_index = dict(ss.brainiac.label_2_index)
@@ -135,6 +136,8 @@ def del_class(label):
     del ss.brainiac.label_2_index[label]
     del ss.brainiac.index_2_label[idx]
     
+    if idx <= ss.n_class_core50:
+        ss.n_class_core50 -= 1
 
     for key in ss.brainiac.label_2_index:
         if ss.brainiac.label_2_index[key]>idx:

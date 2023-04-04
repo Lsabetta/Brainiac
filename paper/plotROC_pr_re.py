@@ -39,7 +39,8 @@ for i, d in enumerate(OPT.DISTANCE_TYPEs):
             m = pkl.load(f)
             precision.append(m.ood_confusion_matrix[0, 0]/(m.ood_confusion_matrix[0, 0]+m.ood_confusion_matrix[0, 1]))
             OODs.append(m.ood_confusion_matrix[0, 0]/(m.ood_confusion_matrix[0, 0]+m.ood_confusion_matrix[1, 0]))
-            print(precision[-1], OODs[-1])
+            print(thresholds[j], precision[-1], OODs[-1])
+            print(m.ood_confusion_matrix)
     thresholds = [0] + thresholds
     precision.append(1.)
     OODs.append(0.)

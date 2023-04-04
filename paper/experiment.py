@@ -12,7 +12,7 @@ import utils
 
 def main():
     dir_path = f"results/{OPT.DATASET}_{OPT.DISTANCE_TYPE}_{OPT.PROCESSING_FRAMES}_{OPT.MODEL}_{OPT.SHUFFLED_SCENARIOS}_p{int(OPT.UPDATE_PROBABILITY*100)}_sl{OPT.SELF_LEARNING}"
-
+    print(dir_path)
     # Set the seed of the experiment
     set_seeds(OPT.SEED)
 
@@ -27,11 +27,13 @@ def main():
     dataset_loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=16)
 
     # Metric object
-    pbar = tqdm(enumerate(dataset_loader), total=len(dataset_loader))
+    pbar = tqdm(enumerate(dataset_loader), total = 50000)#total=len(dataset_loader))
     m = Metrics(OPT.N_CLASSES)
     df = pd.DataFrame(columns=['known', 'known_for_real', 'prediction', 'label', 'accuracy', 'ood', 'type1_ood_error', "moving_avg"])
 
     for i, (image, label) in pbar:
+        if i == 49999:
+            break
         image = image.to(OPT.DEVICE)
         label = label.item()
         
@@ -91,5 +93,7 @@ if __name__ == "__main__":
                 OPT.THRESHOLD = round(t, 2)
                 OPT.UPDATE_PROBABILITY = round(p, 2)
                 OPT.PROCESSING_FRAMES = 1
+                print(f"prob: {p}, threshold:{t}, selflearning: {OPT.SELF_LEARNING}")
+
                 main()
     

@@ -18,16 +18,16 @@ class OPT:
     MODEL = "openCLIP"
     DEVICE='cuda:0'
 
-    DISTANCE_TYPE = "inverse_cosine"
+    DISTANCE_TYPE = "l2"
     DATA_PATH = '/home/luigi/Work/data/'
     PRINT_EVERY = 200
-    DATASET = 'CIFAR100'
+    DATASET = 'CORE50'
     N_CLASSES = DSET_N_CLASSES[DATASET]
     SHUFFLED_SCENARIOS = "shuffled"#/ordered
     OBJ_PER_CLASS = 5
-    SELF_LEARNING = True
-    THRESHOLDS = [0.4]#torch.arange(18.5, 19, 1).numpy()
-    PROBABILITIES = torch.arange(0., 0.11, 0.1).numpy()
+    SELF_LEARNING = False
+    THRESHOLDS = [18]#torch.arange(18.5, 19, 1).numpy()
+    PROBABILITIES = [1]#torch.arange(0.1, 0.11, 0.1).numpy()
     FRAMES = [1]#[1, 10, 20, 30]
     EMBEDDING_SIZE = {
         'CLIP' : 512,

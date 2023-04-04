@@ -121,7 +121,36 @@ def no_func():
         label_pred = ss.brainiac.index_2_label[ss.brainiac.prediction]
         ss.texthistory.write(f"$ Dang. Was it a {label_pred}?")
         ss.brainiac.known = True
-        
+    
+def del_class(label):
+    #temp_label_2_index = dict(ss.brainiac.label_2_index)
+    temp_index_2_label = {}
+    idx = ss.brainiac.label_2_index[label]
+
+    del ss.brainiac.cls_image_examples[label]
+    del ss.brainiac.centroids[label]
+    del ss.brainiac.all_embeddings[label]
+    del ss.brainiac.sigmas[label]
+    
+    del ss.brainiac.label_2_index[label]
+    del ss.brainiac.index_2_label[idx]
+    
+
+    for key in ss.brainiac.label_2_index:
+        if ss.brainiac.label_2_index[key]>idx:
+            ss.brainiac.label_2_index[key] -= 1 
+        else:
+            pass
+    for i in ss.brainiac.index_2_label:
+        if i > idx:
+            temp_index_2_label[i-1] = ss.brainiac.index_2_label[i]
+        else:
+            temp_index_2_label[i] = ss.brainiac.index_2_label[i]
+    ss.brainiac.index_2_label = temp_index_2_label
+
+
+
+
 def clear_pred():
     ss.brainiac.prediction = None
     ss.count_click_photo += 1

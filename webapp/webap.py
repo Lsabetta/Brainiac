@@ -39,12 +39,14 @@ if 'disable_new_infer' not in ss:
 
 ##########################################
 ##########################################
-print(ss.brainiac.index_2_label)
+
 
 # Declare columns
 
 left_column, right_column = st.columns([2, 3])
 
+print("label to index: ", ss.brainiac.label_2_index)
+print("index to label: ", ss.brainiac.index_2_label)
 
 with st.sidebar:
     transform = T.ToPILImage()
@@ -52,7 +54,7 @@ with st.sidebar:
         #st.markdown("""---""")
         l, c, r = st.columns([20, 2, 1])
         with c:
-            st.button("x", key=f"x_{i}")
+            st.button("x", key=f"x_{i}", on_click=del_class, args=(label,))
         img = copy.deepcopy(ss.brainiac.cls_image_examples[label])
         
         if i<10 and OPT.WEBAPP_PRETRAIN:

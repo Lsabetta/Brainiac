@@ -20,18 +20,15 @@ def main():
     set_seeds(OPT.SEED)
     
     df = pd.DataFrame(columns=['known', 'known_for_real', 'prediction', 'label', 'accuracy', 'ood', 'confusion'])
-    if OPT.TEST_MODE:
-        OBJECT_IDS = [i for i in range(1, 51)]
-        random.shuffle(OBJECT_IDS)
-        SCENARIOS_IDS = [i for i in range(1, 11)]
-        random.shuffle(SCENARIOS_IDS)
-        pairs = [(s, obj_idx)  for s in SCENARIOS_IDS for obj_idx in OBJECT_IDS]
-        if OPT.SHUFFLED_SCENARIOS == "shuffled":
-            random.shuffle(pairs)
-
-    elif not OPT.TEST_MODE:
-        OBJECT_IDS = [1+5*i for i in range(5)]
-
+   
+    OBJECT_IDS = [i for i in range(1, 51)]
+    random.shuffle(OBJECT_IDS)
+    SCENARIOS_IDS = [i for i in range(1, 11)]
+    random.shuffle(SCENARIOS_IDS)
+    pairs = [(s, obj_idx)  for s in SCENARIOS_IDS for obj_idx in OBJECT_IDS]
+    if OPT.SHUFFLED_SCENARIOS == "shuffled":
+        random.shuffle(pairs)
+ 
     if OPT.WEBAPP:
         brainiac = st.session_state.brainiac
     else:
@@ -41,22 +38,13 @@ def main():
     m = Metrics()
     print_every = 1 if OPT.VERBOSE else 100
     for iteration, (scenario_id, object_id) in enumerate(pairs):
-          
+        if iteration ==100:
+            break
         if (iteration) % print_every == 0:
             print(f"Iteration n {iteration}")
             print(f"Unique classes seen: {len(brainiac.label_2_index)}, threshold: {format(OPT.THRESHOLD, '.2f')}")
             print(f"{brainiac.label_2_index=}\n{brainiac.index_2_label=}")
         
-        # Core50 paths for the current object
-        
-        if not OPT.TEST_MODE:
-            if iteration < 5:
-                object_id = OBJECT_IDS.pop(0)
-            else:
-                object_id = input("Insert object to extract [1-50]:\n")
-
-            
-        #scenario_id = random.randint(1,11)
         if OPT.VERBOSE:
             print(f'The current object selected is {object_id}, scenario {scenario_id}')
         core_dset = Core50Dataset(scenario_id=scenario_id, object_id=object_id, transform=brainiac.preprocessing)
@@ -64,7 +52,13 @@ def main():
             
         #if this is the first iteration, ask user for the class name, compute embeddings and store centroid
         if len(brainiac.centroids) == 0:
-            first_iteration(core_dset, brainiac)
+            label = _to_core50_label(core_dset.object_id)
+
+            for (video, labels) in DataLoader(core_dset, batch_size=OPT.PROCESSING_FRAMES):
+                brainiac.embeddings = brainiac.model.encode_image(video.to(OPT.DEVICE))
+                break
+
+            brainiac.store_new_class(label, video[0])
             m.update_ood(known=False, known_for_real=False)
             continue
         
@@ -77,18 +71,10 @@ def main():
         known = check_known(model_prediciton, distances, OPT.THRESHOLD)
 
 
-        if not OPT.TEST_MODE:
-            if iteration < 5:
-                known_for_real = False
-                ground_truth_label = CORE50_CLASSES.pop(0)
-            else:
-                #interact with the user based on if the class is thought already known or not
-                known_for_real, ground_truth_label  = verdict(model_prediciton, known, brainiac.label_2_index, video)
-
-        elif OPT.TEST_MODE:
-            ground_truth_label = _to_core50_label(core_dset.object_id)
-            known_for_real = ground_truth_label in brainiac.label_2_index
-            
+   
+        ground_truth_label = _to_core50_label(core_dset.object_id)
+        known_for_real = ground_truth_label in brainiac.label_2_index
+        
 
 
         
@@ -123,32 +109,9 @@ def main():
         pkl.dump(m, f)
 
 
-
-def first_iteration(core_dset, brainiac):
-    if not OPT.TEST_MODE:
-        label = input("First class: what is it?\n")
-    else:
-        label = _to_core50_label(core_dset.object_id)
-
-
-    for (video, labels) in DataLoader(core_dset, batch_size=OPT.PROCESSING_FRAMES):
-        brainiac.embeddings = brainiac.model.encode_image(video.to(OPT.DEVICE))
-        break
-
-    brainiac.store_new_class(label, video[0])
-    
    
 
 if __name__ == "__main__":
     with torch.no_grad():
-        PROBABILITIES = torch.arange(0., 1.1, 0.1).numpy()
-        THRESHOLDS = torch.arange(0.25, 0.55, 0.05).numpy()
-
-        FRAMES = [1, 10, 20, 30]
-        for t in THRESHOLDS:
-            #OPT.UPDATE_PROBABILITY = round(t, 2)
-            #OPT.PROCESSING_FRAMES = f
-            OPT.THRESHOLD = round(t, 2)
-
-            main()
+        main()
     
